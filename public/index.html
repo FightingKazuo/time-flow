@@ -7,9 +7,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TimeFlow" />
+    <meta name="description" content="タスク管理・時間記録・日記アプリ" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>TimeFlow</title>
+    <style>
+      body { margin: 0; background: #0d0f14; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js');
+        });
+      }
+    </script>
   </body>
 </html>
