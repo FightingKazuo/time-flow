@@ -10,7 +10,7 @@ const DEFAULT_CATS = [
 ];
 const PRESET_COLORS = ["#4f9eff","#a78bfa","#34d399","#fb923c","#f87171","#fbbf24","#e879f9","#2dd4bf","#f472b6","#94a3b8"];
 const DAYS_LABEL = ["月","火","水","木","金","土日"];
-const BASE_FONT = 13;
+const BASE_FONT = 15;
 
 const pad = n => String(n).padStart(2,"0");
 const fmtTime  = s => `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
@@ -403,8 +403,12 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
 
       {/* Selected day detail */}
       <div style={{background:"#161920",borderRadius:8,padding:10,border:"1px solid #2a2f3d"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <span style={{fontSize:11,fontWeight:700,color:"#4f9eff"}}>{DAYS_LABEL[selectedDay]} {dayDateStr(selectedDay)} の進捗</span>
+          {diaries[selDate]?.trim()
+            ?<span style={{fontSize:10,color:"#fbbf24",fontWeight:700,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf2466",borderRadius:6,padding:"2px 8px"}}>📔 日記あり</span>
+            :<span style={{fontSize:10,color:"#3d4560",fontWeight:600,background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:6,padding:"2px 8px"}}>日記なし</span>
+          }
         </div>
         <div style={{display:"flex",gap:12}}>
           <div style={{textAlign:"center"}}>
@@ -425,6 +429,63 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
   );
 }
 
+// ─── Weekly Template Manager ──────────────────────────────────────────────────
+function WeeklyTemplateManager({ templates, onSave, onClose }) {
+  const [tpls, setTpls] = useState(templates.map(t=>({...t, days:[...t.days]})));
+  const [newLabel, setNewLabel] = useState("");
+  const newRef = useRef(null);
+
+  const toggleDay = (idx, day) => {
+    setTpls(p=>p.map((t,i)=>i===idx?{...t,days:t.days.includes(day)?t.days.filter(d=>d!==day):[...t.days,day].sort()}:t));
+  };
+  const remove = idx => setTpls(p=>p.filter((_,i)=>i!==idx));
+  const add = () => {
+    const v = newRef.current?.value || "";
+    if(!v.trim()) return;
+    setTpls(p=>[...p,{label:v.trim(),days:[0,1,2,3,4]}]);
+    if(newRef.current) newRef.current.value="";
+  };
+
+  const iS={background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"7px 10px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",flex:1};
+  const bS=bg=>({padding:"6px 10px",borderRadius:7,border:"none",background:bg,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:11});
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={onClose}>
+      <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"85vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={{fontSize:BASE_FONT+2,fontWeight:800}}>⚙ 毎週タスクを編集</div>
+          <button style={bS("#4f9eff")} onClick={()=>onSave(tpls)}>保存して閉じる</button>
+        </div>
+        <div style={{overflowY:"auto",flex:1}}>
+          {tpls.map((t,idx)=>(
+            <div key={idx} style={{background:"#161920",borderRadius:10,padding:10,marginBottom:8,border:"1px solid #2a2f3d"}}>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+                <input style={{...iS,flex:1}} value={t.label} onChange={e=>setTpls(p=>p.map((x,i)=>i===idx?{...x,label:e.target.value}:x))}/>
+                <button style={{...bS("#f87171"),padding:"6px 8px"}} onClick={()=>remove(idx)}>✕</button>
+              </div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                {DAYS_LABEL.map((d,di)=>{
+                  const on=t.days.includes(di);
+                  return <button key={di} onClick={()=>toggleDay(idx,di)} style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${on?"#4f9eff":"#2a2f3d"}`,background:on?"rgba(79,158,255,0.2)":"transparent",color:on?"#4f9eff":"#6b7a99",cursor:"pointer",fontSize:10,fontWeight:700}}>{d}</button>;
+                })}
+              </div>
+            </div>
+          ))}
+          {/* Add new */}
+          <div style={{background:"#161920",borderRadius:10,padding:10,border:"1px dashed #2a2f3d",marginBottom:8}}>
+            <div style={{fontSize:10,color:"#6b7a99",marginBottom:6}}>新しい毎週タスクを追加</div>
+            <div style={{display:"flex",gap:6}}>
+              <input ref={newRef} style={iS} placeholder="タスク名" onKeyDown={e=>e.key==="Enter"&&add()}/>
+              <button style={bS("#34d399")} onClick={add}>追加</button>
+            </div>
+          </div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-1,paddingTop:10}}>キャンセル</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab,          setTab]          = useState("task");
@@ -432,6 +493,8 @@ export default function App() {
   const [selectedCat,  setSelectedCat]  = useState(()=>LS.get("tf_selectedCat",  DEFAULT_CATS[0].id));
   const [showCatMgr,   setShowCatMgr]   = useState(false);
   const [showBackup,   setShowBackup]   = useState(false);
+  const [showWeeklyMgr,setShowWeeklyMgr]= useState(false);
+  const [weeklyTemplates,setWeeklyTemplates]=useState(()=>LS.get("tf_weeklyTpls", WEEKLY_DEFAULTS));
   const [weeklyTasks,  setWeeklyTasks]  = useState(()=>LS.get("tf_weeklyTasks",  buildWeeklyTasks(WEEKLY_DEFAULTS)));
   const [customTasks,  setCustomTasks]  = useState(()=>LS.get("tf_customTasks",  Object.fromEntries(DAYS_LABEL.map((_,i)=>[i,[]]))));
   const [addingDay,    setAddingDay]    = useState(null);
@@ -459,7 +522,24 @@ export default function App() {
   useEffect(()=>LS.set("tf_customTasks", customTasks), [customTasks]);
   useEffect(()=>LS.set("tf_logs",        logs),        [logs]);
   useEffect(()=>LS.set("tf_diaries",     diaries),     [diaries]);
-  useEffect(()=>LS.set("tf_goalHours",   goalHours),   [goalHours]);
+  useEffect(()=>LS.set("tf_weeklyTpls",  weeklyTemplates), [weeklyTemplates]);
+
+  const saveWeeklyTemplates = (tpls) => {
+    setWeeklyTemplates(tpls);
+    // Rebuild weeklyTasks from new templates (keep done states where possible)
+    setWeeklyTasks(prev => {
+      const next = buildWeeklyTasks(tpls);
+      // Carry over done state
+      DAYS_LABEL.forEach((_,i)=>{
+        next[i] = next[i].map(t=>{
+          const old = (prev[i]||[]).find(o=>o.id===t.id);
+          return old ? {...t, done:old.done} : t;
+        });
+      });
+      return next;
+    });
+    setShowWeeklyMgr(false);
+  };
 
   useEffect(()=>{
     if("Notification" in window&&Notification.permission==="default") Notification.requestPermission();
@@ -559,9 +639,17 @@ export default function App() {
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:"#94a3b8"}}>{day}</span>
                     <span style={{fontSize:10,color:"#3d4560"}}>{dayDateStr(i)}</span>
-                    {/* diary dot button */}
-                    <button onClick={()=>setDiaryModal(dayDate)} title="日記" style={{background:"none",border:"none",cursor:"pointer",padding:"0 2px",lineHeight:1,display:"flex",alignItems:"center"}}>
-                      <div style={{width:7,height:7,borderRadius:"50%",background:hasDiary?"#fbbf24":"#2a2f3d",boxShadow:hasDiary?"0 0 5px #fbbf2488":"none",transition:"all 0.2s"}}/>
+                    {/* diary button */}
+                    <button onClick={()=>setDiaryModal(dayDate)} style={{
+                      background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",
+                      border:`1.5px solid ${hasDiary?"#fbbf24":"#3d4560"}`,
+                      borderRadius:8, padding:"3px 8px", cursor:"pointer",
+                      fontSize:11, fontWeight:800,
+                      color:hasDiary?"#fbbf24":"#6b7a99",
+                      lineHeight:"18px", letterSpacing:0.3,
+                      boxShadow:hasDiary?"0 0 6px rgba(251,191,36,0.3)":"none",
+                    }}>
+                      {hasDiary?"📔":"＋日記"}
                     </button>
                   </div>
                   {all.length>0&&<span style={{fontSize:9,fontWeight:700,color:done===all.length?"#34d399":"#6b7a99"}}>{done}/{all.length}</span>}
@@ -585,13 +673,15 @@ export default function App() {
             );
           })}
         </div>
+        {/* 毎週タスク編集ボタン */}
+        <button onClick={()=>setShowWeeklyMgr(true)} style={{width:"100%",background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"12px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700,marginTop:4}}>
+          ⚙ 毎週タスクを編集
+        </button>
       </div>
     );
   };
-
-  // ── Timer Tab (full screen when running) ──────────────────────────────────
   const TimerTab=()=>(
-    <div style={{maxWidth:400,margin:"0 auto"}}>
+    <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:400,margin:"0 auto"}}>
       {!running&&(
         <>
           <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
@@ -608,21 +698,27 @@ export default function App() {
           )}
         </>
       )}
+      {running&&<div style={{fontSize:11,color:"#6b7a99",marginBottom:6,letterSpacing:2,textTransform:"uppercase"}}>計測中</div>}
       <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
         <RingTimer elapsed={elapsed} total={mode==="pomodoro"?pomoDuration*60:0} running={running} color={catColor}/>
       </div>
       {pomoDone&&<div style={{background:"rgba(52,211,153,0.12)",border:"1px solid #34d399",borderRadius:10,padding:10,textAlign:"center",marginBottom:12,fontSize:BASE_FONT,color:"#34d399",fontWeight:700}}>🎉 {pomoDuration}分完了！計測は継続中</div>}
-      {running&&<div style={{textAlign:"center",marginBottom:10,fontSize:BASE_FONT-1,color:"#6b7a99"}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>}
+      {running&&(
+        <div style={{textAlign:"center",marginBottom:14}}>
+          <div style={{fontSize:BASE_FONT-1,color:"#6b7a99"}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
+          <div style={{fontSize:BASE_FONT-1,color:"#6b7a99",marginTop:4}}>{fmtHMS(elapsed)}</div>
+        </div>
+      )}
       <div style={{display:"flex",justifyContent:"center",gap:10}}>
         {!running
-          ?<button style={{...S.btn("#34d399"),padding:"14px 48px",fontSize:16,borderRadius:50}} onClick={()=>setRunning(true)}>▶ 開始</button>
+          ?<button style={{...S.btn("#34d399"),padding:"14px 48px",fontSize:16,borderRadius:50}} onClick={()=>{setRunning(true);setTab("timer");}}>▶ 開始</button>
           :<>
             <button style={{...S.btn("#fb923c"),padding:"14px 28px",fontSize:15,borderRadius:50}} onClick={()=>setRunning(false)}>⏸ 一時停止</button>
             <button style={{...S.btn("#f87171"),padding:"14px 24px",fontSize:15,borderRadius:50}} onClick={handleStop}>■ 終了・記録</button>
           </>
         }
       </div>
-      {elapsed>0&&<div style={{textAlign:"center",marginTop:12,color:"#6b7a99",fontSize:BASE_FONT-1}}>経過: <span style={{color:"#e8ecf4",fontWeight:700,fontFamily:"monospace"}}>{fmtTime(elapsed)}</span><span style={{color:"#6b7a99",marginLeft:6}}>({fmtHMS(elapsed)})</span></div>}
+      {!running&&elapsed>0&&<div style={{textAlign:"center",marginTop:12,color:"#6b7a99",fontSize:BASE_FONT-1}}>経過: <span style={{color:"#e8ecf4",fontWeight:700,fontFamily:"monospace"}}>{fmtTime(elapsed)}</span> ({fmtHMS(elapsed)})</div>}
     </div>
   );
 
@@ -728,6 +824,7 @@ export default function App() {
         {tab==="log"&&<LogTab/>}
       </div>
 
+      {showWeeklyMgr&&<WeeklyTemplateManager templates={weeklyTemplates} onSave={saveWeeklyTemplates} onClose={()=>setShowWeeklyMgr(false)}/>}
       {showCatMgr&&<CatManagerModal categories={categories} onChange={c=>{setCategories(c);if(!c.find(x=>x.id===selectedCat))setSelectedCat(c[0]?.id);}} onClose={()=>setShowCatMgr(false)}/>}
       {editingLog&&<EditLogModal log={editingLog} categories={categories} onSave={u=>{setLogs(p=>p.map(l=>l.id===u.id?u:l));setEditingLog(null);}} onClose={()=>setEditingLog(null)}/>}
       {diaryModal&&<DiaryModal date={diaryModal} diary={diaries[diaryModal]} onSave={t=>saveDiary(diaryModal,t)} onClose={()=>setDiaryModal(null)}/>}
