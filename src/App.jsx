@@ -10,7 +10,7 @@ const DEFAULT_CATS = [
 ];
 const PRESET_COLORS = ["#4f9eff","#a78bfa","#34d399","#fb923c","#f87171","#fbbf24","#e879f9","#2dd4bf","#f472b6","#94a3b8"];
 const DAYS_LABEL = ["月","火","水","木","金","土日"];
-const BASE_FONT = 15;
+const BASE_FONT = 17;
 
 const pad = n => String(n).padStart(2,"0");
 const fmtTime  = s => `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
@@ -141,17 +141,51 @@ function TimelineBar({ logs, categories, date }) {
   );
 }
 
-// ─── Category Dial ────────────────────────────────────────────────────────────
-function CategoryDial({ categories, selected, onSelect, disabled }) {
-  const ref=useRef(null);
+// ─── Category Dial (with drag reorder) ───────────────────────────────────────
+function CategoryDial({ categories, selected, onSelect, onReorder, disabled }) {
+  const ref = useRef(null);
+  const dragIdx = useRef(null);
+  const [dragOver, setDragOver] = useState(null);
+
   useEffect(()=>{ const el=ref.current; if(!el) return; const idx=categories.findIndex(c=>c.id===selected); el.scrollLeft=idx*82-el.clientWidth/2+41; },[selected,categories]);
+
+  const handleDragStart = (i) => { dragIdx.current = i; };
+  const handleDragOver  = (i) => { if(i !== dragIdx.current) setDragOver(i); };
+  const handleDrop      = (i) => {
+    if(dragIdx.current === null || dragIdx.current === i) { setDragOver(null); return; }
+    const arr = [...categories];
+    const [moved] = arr.splice(dragIdx.current, 1);
+    arr.splice(i, 0, moved);
+    onReorder(arr);
+    dragIdx.current = null; setDragOver(null);
+  };
+
+  // Touch reorder
+  const touchStart = useRef(null);
+  const getTouchProps = (i) => ({
+    onTouchStart: () => { touchStart.current = i; },
+    onTouchEnd: () => { touchStart.current = null; setDragOver(null); },
+  });
+
   return (
     <div style={{marginBottom:14}}>
-      <div style={{fontSize:11,color:"#6b7a99",fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー</div>
+      <div style={{fontSize:11,color:"#6b7a99",fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー <span style={{fontSize:10,color:"#3d4560"}}>（長押しで並び替え）</span></div>
       <div ref={ref} style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 12px 6px",scrollSnapType:"x mandatory",scrollbarWidth:"none"}}>
-        {categories.map(c=>{ const a=selected===c.id; return (
-          <div key={c.id} onClick={()=>!disabled&&onSelect(c.id)} style={{scrollSnapAlign:"center",flexShrink:0,width:66,padding:"8px 4px",borderRadius:10,border:`2px solid ${a?c.color:"#2a2f3d"}`,background:a?`rgba(${hexRgb(c.color)},0.18)`:"#161920",cursor:disabled?"not-allowed":"pointer",textAlign:"center",transition:"all 0.2s",transform:a?"scale(1.06)":"scale(1)",opacity:disabled&&!a?0.4:1}}>
-            <div style={{width:20,height:20,borderRadius:"50%",background:c.color,margin:"0 auto 4px",boxShadow:a?`0 0 10px ${c.color}88`:"none"}}/>
+        {categories.map((c,i)=>{ const a=selected===c.id; return (
+          <div key={c.id}
+            draggable
+            onDragStart={()=>handleDragStart(i)}
+            onDragOver={e=>{e.preventDefault();handleDragOver(i);}}
+            onDrop={()=>handleDrop(i)}
+            onDragEnd={()=>setDragOver(null)}
+            onClick={()=>!disabled&&onSelect(c.id)}
+            style={{scrollSnapAlign:"center",flexShrink:0,width:72,padding:"10px 4px",borderRadius:10,
+              border:`2px solid ${dragOver===i?"#fbbf24":a?c.color:"#2a2f3d"}`,
+              background:dragOver===i?"rgba(251,191,36,0.12)":a?`rgba(${hexRgb(c.color)},0.18)`:"#161920",
+              cursor:disabled?"not-allowed":"grab",textAlign:"center",transition:"all 0.2s",
+              transform:a?"scale(1.06)":dragOver===i?"scale(1.04)":"scale(1)",
+              opacity:disabled&&!a?0.4:1}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:c.color,margin:"0 auto 5px",boxShadow:a?`0 0 10px ${c.color}88`:"none"}}/>
             <div style={{fontSize:11,fontWeight:700,color:a?c.color:"#6b7a99"}}>{c.name}</div>
           </div>
         );})}
@@ -343,18 +377,23 @@ function BackupModal({ data, onRestore, onClose }) {
 }
 
 // ─── Weekly Progress ──────────────────────────────────────────────────────────
-function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, onSelectDay, selectedDay }) {
+function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, onSelectDay, selectedDay, studyCatId }) {
   const days=DAYS_LABEL.map((_,i)=>{ const wt=weeklyTasks[i]||[],ct=customTasks[i]||[],all=[...wt,...ct]; return {day:DAYS_LABEL[i],total:all.length,done:all.filter(t=>t.done).length}; });
   const totalT=days.reduce((s,d)=>s+d.total,0), doneT=days.reduce((s,d)=>s+d.done,0);
   const taskPct=totalT>0?Math.round(doneT/totalT*100):0;
-  const weekTotal=logs.reduce((s,l)=>s+l.duration,0);
-  const timePct=goalHours>0?Math.min(Math.round(weekTotal/goalHours/3600*100),100):0;
+
+  // Study-only time for goal tracking
+  const studyWeekTotal=logs.filter(l=>l.catId===studyCatId).reduce((s,l)=>s+l.duration,0);
+  const studyTodayTotal=logs.filter(l=>l.catId===studyCatId&&l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
+  const timePct=goalHours>0?Math.min(Math.round(studyWeekTotal/goalHours/3600*100),100):0;
+  const goalReached = studyWeekTotal >= goalHours*3600;
+
   const todayTotal=logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
   const mon=getWeekMonday(); let diaryCount=0;
   for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(d.getDate()+i); if(diaries[fmtDate(d)]?.trim()) diaryCount++; }
   const diaryPct=Math.round(diaryCount/7*100);
 
-  const Ring=({pct,color,label,sub})=>{
+  const Ring=({pct,color,label,sub,achieved})=>{
     const r=20,c=2*Math.PI*r,d=c*(1-pct/100);
     return <div style={{textAlign:"center"}}>
       <svg width="56" height="56" viewBox="0 0 48 48">
@@ -362,7 +401,7 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
         <circle cx="24" cy="24" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={d} transform="rotate(-90 24 24)" style={{transition:"stroke-dashoffset 0.6s"}}/>
         <text x="24" y="28" textAnchor="middle" fill={color} fontSize="10" fontWeight="800" fontFamily="monospace">{pct}%</text>
       </svg>
-      <div style={{fontSize:10,fontWeight:700,color:"#e8ecf4",marginTop:2}}>{label}</div>
+      <div style={{fontSize:10,fontWeight:700,color:"#e8ecf4",marginTop:2}}>{label}{achieved&&<span style={{marginLeft:2}}>🎯</span>}</div>
       <div style={{fontSize:9,color:"#6b7a99"}}>{sub}</div>
     </div>;
   };
@@ -371,21 +410,28 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
   const selDate = fmtDate(getDayDate(selectedDay));
   const selLogs = logs.filter(l=>l.date===selDate);
   const selTotal = selLogs.reduce((s,l)=>s+l.duration,0);
+  const selStudyTotal = selLogs.filter(l=>l.catId===studyCatId).reduce((s,l)=>s+l.duration,0);
   const selD = days[selectedDay];
   const selTaskPct = selD.total>0?Math.round(selD.done/selD.total*100):0;
 
   return (
     <div style={{background:"#1e2330",borderRadius:12,border:"1px solid #2a2f3d",padding:14,marginBottom:12}}>
+      {/* Goal reached banner */}
+      {goalReached&&(
+        <div style={{background:"rgba(52,211,153,0.12)",border:"1px solid #34d399",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:BASE_FONT-2,color:"#34d399",fontWeight:700,textAlign:"center"}}>
+          🎯 今週の勉強目標達成！{fmtHM(studyWeekTotal)} / {goalHours}h
+        </div>
+      )}
       {/* Week rings */}
-      <div style={{fontSize:BASE_FONT-1,fontWeight:800,marginBottom:10,color:"#6b7a99"}}>今週の進捗</div>
+      <div style={{fontSize:BASE_FONT-2,fontWeight:800,marginBottom:10,color:"#6b7a99"}}>今週の進捗</div>
       <div style={{display:"flex",justifyContent:"space-around",marginBottom:14}}>
         <Ring pct={taskPct} color="#4f9eff" label="タスク" sub={`${doneT}/${totalT}`}/>
-        <Ring pct={timePct} color="#34d399" label="時間目標" sub={`${fmtHM(weekTotal)}/${goalHours}h`}/>
+        <Ring pct={timePct} color="#34d399" label="勉強目標" sub={`${fmtHM(studyWeekTotal)}/${goalHours}h`} achieved={goalReached}/>
         <Ring pct={diaryPct} color="#fbbf24" label="日記" sub={`${diaryCount}/7日`}/>
         <div style={{textAlign:"center"}}>
-          <div style={{fontSize:18,fontWeight:800,color:"#fb923c",fontFamily:"monospace",marginTop:4}}>{fmtHM(todayTotal)||"0m"}</div>
-          <div style={{fontSize:10,fontWeight:700,color:"#e8ecf4",marginTop:2}}>今日</div>
-          <div style={{fontSize:9,color:"#6b7a99"}}>記録時間</div>
+          <div style={{fontSize:16,fontWeight:800,color:"#fb923c",fontFamily:"monospace",marginTop:4}}>{fmtHM(todayTotal)||"0m"}</div>
+          <div style={{fontSize:9,fontWeight:700,color:"#e8ecf4",marginTop:2}}>今日合計</div>
+          <div style={{fontSize:9,color:"#4f9eff"}}>{fmtHM(studyTodayTotal)||"0m"} 勉強</div>
         </div>
       </div>
 
@@ -416,8 +462,12 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
             <div style={{fontSize:9,color:"#6b7a99"}}>タスク {selD.done}/{selD.total}</div>
           </div>
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:16,fontWeight:800,color:"#34d399"}}>{fmtHMS(selTotal)||"0秒"}</div>
-            <div style={{fontSize:9,color:"#6b7a99"}}>記録時間</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#34d399"}}>{fmtHM(selStudyTotal)||"0m"}</div>
+            <div style={{fontSize:9,color:"#6b7a99"}}>勉強時間</div>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#94a3b8"}}>{fmtHM(selTotal)||"0m"}</div>
+            <div style={{fontSize:9,color:"#6b7a99"}}>合計時間</div>
           </div>
           {diaries[selDate]?.trim()&&<div style={{textAlign:"center"}}>
             <div style={{fontSize:16}}>📔</div>
@@ -491,10 +541,12 @@ export default function App() {
   const [tab,          setTab]          = useState("task");
   const [categories,   setCategories]   = useState(()=>LS.get("tf_categories",   DEFAULT_CATS));
   const [selectedCat,  setSelectedCat]  = useState(()=>LS.get("tf_selectedCat",  DEFAULT_CATS[0].id));
+  const [studyCatId,   setStudyCatId]   = useState(()=>LS.get("tf_studyCatId",   "study"));
   const [showCatMgr,   setShowCatMgr]   = useState(false);
   const [showBackup,   setShowBackup]   = useState(false);
   const [showWeeklyMgr,setShowWeeklyMgr]= useState(false);
   const [weeklyTemplates,setWeeklyTemplates]=useState(()=>LS.get("tf_weeklyTpls", WEEKLY_DEFAULTS));
+  const [splash,       setSplash]       = useState(true);
   const [weeklyTasks,  setWeeklyTasks]  = useState(()=>LS.get("tf_weeklyTasks",  buildWeeklyTasks(WEEKLY_DEFAULTS)));
   const [customTasks,  setCustomTasks]  = useState(()=>LS.get("tf_customTasks",  Object.fromEntries(DAYS_LABEL.map((_,i)=>[i,[]]))));
   const [addingDay,    setAddingDay]    = useState(null);
@@ -522,7 +574,10 @@ export default function App() {
   useEffect(()=>LS.set("tf_customTasks", customTasks), [customTasks]);
   useEffect(()=>LS.set("tf_logs",        logs),        [logs]);
   useEffect(()=>LS.set("tf_diaries",     diaries),     [diaries]);
-  useEffect(()=>LS.set("tf_weeklyTpls",  weeklyTemplates), [weeklyTemplates]);
+  useEffect(()=>LS.set("tf_studyCatId",  studyCatId),  [studyCatId]);
+
+  // Splash screen: show for 2 seconds on first load
+  useEffect(()=>{ const t=setTimeout(()=>setSplash(false), 2000); return ()=>clearTimeout(t); },[]);
 
   const saveWeeklyTemplates = (tpls) => {
     setWeeklyTemplates(tpls);
@@ -590,6 +645,7 @@ export default function App() {
     setMovePopup(null);
   };
   const saveDiary=(date,text)=>setDiaries(p=>({...p,[date]:text}));
+  const reorderCategories=(newOrder)=>setCategories(newOrder);
 
   const S={
     app:{minHeight:"100vh",background:"#0d0f14",color:"#e8ecf4",fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
@@ -687,7 +743,7 @@ export default function App() {
           <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
             {["timer","pomodoro"].map(m=><button key={m} style={S.btnSm(mode===m,catColor)} onClick={()=>{setMode(m);setElapsed(0);baseElapsedRef.current=0;}}>{m==="timer"?"⏱ タイマー":"🍅 ポモドーロ"}</button>)}
           </div>
-          <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} disabled={false}/>
+          <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} onReorder={reorderCategories} disabled={false}/>
           <div style={{textAlign:"center",marginBottom:10}}>
             <button style={{background:"none",border:"none",color:"#3d4560",fontSize:BASE_FONT-2,cursor:"pointer"}} onClick={()=>setShowCatMgr(true)}>⚙ カテゴリーを管理</button>
           </div>
@@ -731,13 +787,22 @@ export default function App() {
     const dates=Object.keys(byDate).sort().reverse();
     return (
       <div>
-        <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay}/>
-        <div style={{...S.card,display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <span style={{fontSize:BASE_FONT-1,color:"#6b7a99"}}>週間時間目標</span>
-          {editGoal
-            ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-1}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
-            :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
-          }
+        <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay} studyCatId={studyCatId}/>
+        {/* Study cat + goal settings */}
+        <div style={{...S.card,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標対象カテゴリー</span>
+            <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
+              {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
+            {editGoal
+              ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
+              :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
+            }
+          </div>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <span style={{fontSize:BASE_FONT+1,fontWeight:800}}>📊 記録</span>
@@ -785,6 +850,27 @@ export default function App() {
 
   return (
     <div style={S.app}>
+      {/* ── Splash Screen ── */}
+      {splash&&(
+        <div style={{position:"fixed",inset:0,zIndex:999,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",transition:"opacity 0.5s",opacity:1}}>
+          {/* Animated ring */}
+          <svg width="100" height="100" viewBox="0 0 100 100" style={{marginBottom:24}}>
+            <defs>
+              <filter id="sp-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#1e2330" strokeWidth="6"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#4f9eff" strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={2*Math.PI*38} strokeDashoffset={2*Math.PI*38*0.25}
+              transform="rotate(-90 50 50)" filter="url(#sp-glow)"
+              style={{animation:"spin 1.4s linear infinite"}}/>
+            {/* Check icon */}
+            <polyline points="30,52 44,66 70,38" fill="none" stroke="#4f9eff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" filter="url(#sp-glow)"/>
+            <style>{`@keyframes spin{from{stroke-dashoffset:${2*Math.PI*38}}to{stroke-dashoffset:${-2*Math.PI*38}}}`}</style>
+          </svg>
+          <div style={{fontSize:28,fontWeight:900,color:"#e8ecf4",letterSpacing:"-0.5px",marginBottom:6}}>TimeFlow</div>
+          <div style={{fontSize:13,color:"#6b7a99",letterSpacing:2}}>タスク & 時間管理</div>
+        </div>
+      )}
       {/* Full-screen timer when running and not on timer tab */}
       {running&&tab!=="timer"&&(
         <div style={{position:"fixed",inset:0,zIndex:90,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
