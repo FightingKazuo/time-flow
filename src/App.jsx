@@ -41,9 +41,10 @@ const buildWeeklyTasks = tpls => Object.fromEntries(
   DAYS_LABEL.map((_,i)=>[i, tpls.filter(t=>t.days.includes(i)).map(t=>({id:`w_${t.label}_${i}`,label:t.label,done:false,weekly:true}))])
 );
 
+const _store = {};
 const LS = {
-  get: (k,d) => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } },
-  set: (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} },
+  get: (k,d) => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):(_store[k]??d); }catch{ return _store[k]??d; } },
+  set: (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} _store[k]=v; },
 };
 
 function notify(title, body) {
@@ -141,50 +142,21 @@ function TimelineBar({ logs, categories, date }) {
   );
 }
 
-// ─── Category Dial (with drag reorder) ───────────────────────────────────────
-function CategoryDial({ categories, selected, onSelect, onReorder, disabled }) {
+// ─── Category Dial (display only, reorder via CatManager) ────────────────────
+function CategoryDial({ categories, selected, onSelect, disabled }) {
   const ref = useRef(null);
-  const dragIdx = useRef(null);
-  const [dragOver, setDragOver] = useState(null);
-
   useEffect(()=>{ const el=ref.current; if(!el) return; const idx=categories.findIndex(c=>c.id===selected); el.scrollLeft=idx*82-el.clientWidth/2+41; },[selected,categories]);
-
-  const handleDragStart = (i) => { dragIdx.current = i; };
-  const handleDragOver  = (i) => { if(i !== dragIdx.current) setDragOver(i); };
-  const handleDrop      = (i) => {
-    if(dragIdx.current === null || dragIdx.current === i) { setDragOver(null); return; }
-    const arr = [...categories];
-    const [moved] = arr.splice(dragIdx.current, 1);
-    arr.splice(i, 0, moved);
-    onReorder(arr);
-    dragIdx.current = null; setDragOver(null);
-  };
-
-  // Touch reorder
-  const touchStart = useRef(null);
-  const getTouchProps = (i) => ({
-    onTouchStart: () => { touchStart.current = i; },
-    onTouchEnd: () => { touchStart.current = null; setDragOver(null); },
-  });
-
   return (
     <div style={{marginBottom:14}}>
-      <div style={{fontSize:11,color:"#6b7a99",fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー <span style={{fontSize:10,color:"#3d4560"}}>（長押しで並び替え）</span></div>
+      <div style={{fontSize:11,color:"#6b7a99",fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー</div>
       <div ref={ref} style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 12px 6px",scrollSnapType:"x mandatory",scrollbarWidth:"none"}}>
         {categories.map((c,i)=>{ const a=selected===c.id; return (
-          <div key={c.id}
-            draggable
-            onDragStart={()=>handleDragStart(i)}
-            onDragOver={e=>{e.preventDefault();handleDragOver(i);}}
-            onDrop={()=>handleDrop(i)}
-            onDragEnd={()=>setDragOver(null)}
-            onClick={()=>!disabled&&onSelect(c.id)}
+          <div key={c.id} onClick={()=>!disabled&&onSelect(c.id)}
             style={{scrollSnapAlign:"center",flexShrink:0,width:72,padding:"10px 4px",borderRadius:10,
-              border:`2px solid ${dragOver===i?"#fbbf24":a?c.color:"#2a2f3d"}`,
-              background:dragOver===i?"rgba(251,191,36,0.12)":a?`rgba(${hexRgb(c.color)},0.18)`:"#161920",
-              cursor:disabled?"not-allowed":"grab",textAlign:"center",transition:"all 0.2s",
-              transform:a?"scale(1.06)":dragOver===i?"scale(1.04)":"scale(1)",
-              opacity:disabled&&!a?0.4:1}}>
+              border:`2px solid ${a?c.color:"#2a2f3d"}`,
+              background:a?`rgba(${hexRgb(c.color)},0.18)`:"#161920",
+              cursor:disabled?"not-allowed":"pointer",textAlign:"center",transition:"all 0.2s",
+              transform:a?"scale(1.06)":"scale(1)",opacity:disabled&&!a?0.4:1}}>
             <div style={{width:22,height:22,borderRadius:"50%",background:c.color,margin:"0 auto 5px",boxShadow:a?`0 0 10px ${c.color}88`:"none"}}/>
             <div style={{fontSize:11,fontWeight:700,color:a?c.color:"#6b7a99"}}>{c.name}</div>
           </div>
@@ -314,17 +286,26 @@ function CatManagerModal({ categories, onChange, onClose }) {
   const [cats,setCats]=useState(categories.map(c=>({...c})));
   const [newName,setNewName]=useState(""); const [newColor,setNewColor]=useState(PRESET_COLORS[0]); const [editing,setEditing]=useState(null);
   const iS={background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 10px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",flex:1};
-  const bS=bg=>({padding:"7px 12px",borderRadius:8,border:"none",background:bg,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:11});
+  const bS=bg=>({padding:"7px 10px",borderRadius:8,border:"none",background:bg,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:11});
+
+  const moveUp   = i => { if(i===0) return; const a=[...cats]; [a[i-1],a[i]]=[a[i],a[i-1]]; setCats(a); };
+  const moveDown = i => { if(i===cats.length-1) return; const a=[...cats]; [a[i],a[i+1]]=[a[i+1],a[i]]; setCats(a); };
+
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={onClose}>
-      <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"82vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <span style={{fontSize:BASE_FONT+2,fontWeight:800}}>カテゴリー管理</span>
           <button style={bS("#4f9eff")} onClick={()=>{onChange(cats);onClose();}}>完了</button>
         </div>
-        {cats.map(c=>(
+        {cats.map((c,i)=>(
           <div key={c.id} style={{marginBottom:8,background:"#161920",borderRadius:10,padding:10,border:"1px solid #2a2f3d"}}>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {/* Up/Down arrows */}
+              <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
+                <button onClick={()=>moveUp(i)} disabled={i===0} style={{background:i===0?"#1e2330":"#2a2f3d",border:"none",borderRadius:4,width:24,height:22,color:i===0?"#3d4560":"#e8ecf4",cursor:i===0?"not-allowed":"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
+                <button onClick={()=>moveDown(i)} disabled={i===cats.length-1} style={{background:i===cats.length-1?"#1e2330":"#2a2f3d",border:"none",borderRadius:4,width:24,height:22,color:i===cats.length-1?"#3d4560":"#e8ecf4",cursor:i===cats.length-1?"not-allowed":"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
+              </div>
               <div style={{width:16,height:16,borderRadius:"50%",background:c.color,flexShrink:0}}/>
               <input style={{...iS,flex:1}} value={c.name} onChange={e=>setCats(p=>p.map(x=>x.id===c.id?{...x,name:e.target.value}:x))}/>
               <button style={{...bS(editing===c.id?"#4f9eff":"#2a2f3d"),padding:"6px 8px"}} onClick={()=>setEditing(editing===c.id?null:c.id)}>🎨</button>
@@ -479,6 +460,99 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
   );
 }
 
+// ─── Long-Term Task Modal ─────────────────────────────────────────────────────
+function LongTermModal({ tasks, onSave, onClose }) {
+  const [items, setItems] = useState(tasks.map(t=>({...t})));
+  const [newLabel, setNewLabel] = useState("");
+  const [showDone, setShowDone] = useState(false);
+  const newRef = useRef(null);
+
+  const add = () => {
+    const v = newRef.current?.value || "";
+    if(!v.trim()) return;
+    setItems(p=>[...p, { id:Date.now(), label:v.trim(), done:false, createdAt:todayStr() }]);
+    if(newRef.current) newRef.current.value = "";
+  };
+  const toggle = id => setItems(p=>p.map(t=>t.id===id?{...t,done:!t.done,doneAt:t.done?null:todayStr()}:t));
+  const remove = id => setItems(p=>p.filter(t=>t.id!==id));
+
+  const active = items.filter(t=>!t.done);
+  const done   = items.filter(t=>t.done);
+
+  const bS = bg => ({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2});
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={()=>{onSave(items);onClose();}}>
+      <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"88vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div>
+            <div style={{fontSize:BASE_FONT+2,fontWeight:800}}>📌 中長期タスク</div>
+            <div style={{fontSize:11,color:"#6b7a99"}}>週をまたいで管理するタスク</div>
+          </div>
+          <button style={bS("#4f9eff")} onClick={()=>{onSave(items);onClose();}}>保存</button>
+        </div>
+
+        {/* Stats */}
+        <div style={{display:"flex",gap:8,margin:"12px 0"}}>
+          <div style={{flex:1,background:"#161920",borderRadius:8,padding:"8px 10px",textAlign:"center",border:"1px solid #2a2f3d"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#4f9eff"}}>{active.length}</div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>進行中</div>
+          </div>
+          <div style={{flex:1,background:"#161920",borderRadius:8,padding:"8px 10px",textAlign:"center",border:"1px solid #2a2f3d"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#34d399"}}>{done.length}</div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>完了済み</div>
+          </div>
+        </div>
+
+        {/* Add input */}
+        <div style={{display:"flex",gap:6,marginBottom:12}}>
+          <input ref={newRef} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"9px 12px",color:"#e8ecf4",fontSize:BASE_FONT-1,outline:"none",flex:1}} placeholder="新しいタスクを追加..." onKeyDown={e=>e.key==="Enter"&&add()}/>
+          <button style={bS("#34d399")} onClick={add}>追加</button>
+        </div>
+
+        <div style={{overflowY:"auto",flex:1}}>
+          {/* Active tasks */}
+          {active.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:16,fontSize:BASE_FONT-1}}>進行中のタスクはありません</div>}
+          {active.map(t=>(
+            <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 0",borderBottom:"1px solid #2a2f3d"}}>
+              <div onClick={()=>toggle(t.id)} style={{width:20,height:20,borderRadius:5,flexShrink:0,border:"2px solid #3d4560",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:BASE_FONT-1,fontWeight:600}}>{t.label}</div>
+                <div style={{fontSize:10,color:"#3d4560",marginTop:2}}>追加: {t.createdAt}</div>
+              </div>
+              <button onClick={()=>remove(t.id)} style={{background:"none",border:"none",color:"#3d4560",cursor:"pointer",fontSize:16,padding:"0 4px"}}>✕</button>
+            </div>
+          ))}
+
+          {/* Done section */}
+          {done.length>0&&(
+            <div style={{marginTop:16}}>
+              <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700,padding:"4px 0",display:"flex",alignItems:"center",gap:6}}>
+                {showDone?"▼":"▶"} 完了済み ({done.length}件)
+              </button>
+              {showDone&&done.map(t=>(
+                <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 0",borderBottom:"1px solid #2a2f3d",opacity:0.5}}>
+                  <div onClick={()=>toggle(t.id)} style={{width:20,height:20,borderRadius:5,flexShrink:0,border:"2px solid #34d399",background:"#34d399",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <span style={{color:"#fff",fontSize:12}}>✓</span>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:BASE_FONT-1,fontWeight:600,textDecoration:"line-through"}}>{t.label}</div>
+                    <div style={{fontSize:10,color:"#3d4560",marginTop:2}}>完了: {t.doneAt}</div>
+                  </div>
+                  <button onClick={()=>remove(t.id)} style={{background:"none",border:"none",color:"#3d4560",cursor:"pointer",fontSize:16,padding:"0 4px"}}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <button onClick={()=>{onSave(items);onClose();}} style={{background:"none",border:"none",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,paddingTop:12}}>閉じる</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Weekly Template Manager ──────────────────────────────────────────────────
 function WeeklyTemplateManager({ templates, onSave, onClose }) {
   const [tpls, setTpls] = useState(templates.map(t=>({...t, days:[...t.days]})));
@@ -546,7 +620,9 @@ export default function App() {
   const [showBackup,   setShowBackup]   = useState(false);
   const [showWeeklyMgr,setShowWeeklyMgr]= useState(false);
   const [weeklyTemplates,setWeeklyTemplates]=useState(()=>LS.get("tf_weeklyTpls", WEEKLY_DEFAULTS));
-  const [splash,       setSplash]       = useState(true);
+  const [longTermTasks, setLongTermTasks] = useState(()=>LS.get("tf_longTerm", []));
+  const [showLongTerm,  setShowLongTerm]  = useState(false);
+  const [splash,        setSplash]        = useState(true);
   const [weeklyTasks,  setWeeklyTasks]  = useState(()=>LS.get("tf_weeklyTasks",  buildWeeklyTasks(WEEKLY_DEFAULTS)));
   const [customTasks,  setCustomTasks]  = useState(()=>LS.get("tf_customTasks",  Object.fromEntries(DAYS_LABEL.map((_,i)=>[i,[]]))));
   const [addingDay,    setAddingDay]    = useState(null);
@@ -574,6 +650,7 @@ export default function App() {
   useEffect(()=>LS.set("tf_customTasks", customTasks), [customTasks]);
   useEffect(()=>LS.set("tf_logs",        logs),        [logs]);
   useEffect(()=>LS.set("tf_diaries",     diaries),     [diaries]);
+  useEffect(()=>LS.set("tf_longTerm",    longTermTasks), [longTermTasks]);
   useEffect(()=>LS.set("tf_studyCatId",  studyCatId),  [studyCatId]);
 
   // Splash screen: show for 2 seconds on first load
@@ -733,6 +810,36 @@ export default function App() {
         <button onClick={()=>setShowWeeklyMgr(true)} style={{width:"100%",background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"12px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700,marginTop:4}}>
           ⚙ 毎週タスクを編集
         </button>
+
+        {/* ── 中長期タスク ── */}
+        <div style={{marginTop:16,borderTop:"1px dashed #2a2f3d",paddingTop:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div>
+              <div style={{fontSize:BASE_FONT,fontWeight:800}}>📌 中長期タスク</div>
+              <div style={{fontSize:11,color:"#6b7a99"}}>週をまたいで管理</div>
+            </div>
+            <button onClick={()=>setShowLongTerm(true)} style={{background:"rgba(251,146,60,0.1)",border:"1px solid rgba(251,146,60,0.3)",borderRadius:8,padding:"7px 14px",color:"#fb923c",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
+              編集 / 追加
+            </button>
+          </div>
+          {/* Active long-term tasks preview */}
+          {longTermTasks.filter(t=>!t.done).length===0
+            ?<div style={{textAlign:"center",color:"#3d4560",fontSize:BASE_FONT-2,padding:"10px 0"}}>タスクなし　→「編集 / 追加」から追加できます</div>
+            :longTermTasks.filter(t=>!t.done).map(t=>(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#1e2330",borderRadius:8,marginBottom:6,border:"1px solid #2a2f3d"}}>
+                <div onClick={()=>setLongTermTasks(p=>p.map(x=>x.id===t.id?{...x,done:true,doneAt:todayStr()}:x))} style={{width:18,height:18,borderRadius:4,flexShrink:0,border:"2px solid #fb923c",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                </div>
+                <span style={{fontSize:BASE_FONT-1,flex:1}}>{t.label}</span>
+                <span style={{fontSize:10,color:"#3d4560"}}>{t.createdAt}</span>
+              </div>
+            ))
+          }
+          {longTermTasks.filter(t=>t.done).length>0&&(
+            <div style={{fontSize:11,color:"#34d399",textAlign:"right",marginTop:4}}>
+              ✓ 完了済み {longTermTasks.filter(t=>t.done).length}件
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -743,7 +850,7 @@ export default function App() {
           <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
             {["timer","pomodoro"].map(m=><button key={m} style={S.btnSm(mode===m,catColor)} onClick={()=>{setMode(m);setElapsed(0);baseElapsedRef.current=0;}}>{m==="timer"?"⏱ タイマー":"🍅 ポモドーロ"}</button>)}
           </div>
-          <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} onReorder={reorderCategories} disabled={false}/>
+          <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} disabled={false}/>
           <div style={{textAlign:"center",marginBottom:10}}>
             <button style={{background:"none",border:"none",color:"#3d4560",fontSize:BASE_FONT-2,cursor:"pointer"}} onClick={()=>setShowCatMgr(true)}>⚙ カテゴリーを管理</button>
           </div>
@@ -910,6 +1017,7 @@ export default function App() {
         {tab==="log"&&<LogTab/>}
       </div>
 
+      {showLongTerm&&<LongTermModal tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)}/>}
       {showWeeklyMgr&&<WeeklyTemplateManager templates={weeklyTemplates} onSave={saveWeeklyTemplates} onClose={()=>setShowWeeklyMgr(false)}/>}
       {showCatMgr&&<CatManagerModal categories={categories} onChange={c=>{setCategories(c);if(!c.find(x=>x.id===selectedCat))setSelectedCat(c[0]?.id);}} onClose={()=>setShowCatMgr(false)}/>}
       {editingLog&&<EditLogModal log={editingLog} categories={categories} onSave={u=>{setLogs(p=>p.map(l=>l.id===u.id?u:l));setEditingLog(null);}} onClose={()=>setEditingLog(null)}/>}
