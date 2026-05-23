@@ -41,12 +41,86 @@ const buildWeeklyTasks = tpls => Object.fromEntries(
   DAYS_LABEL.map((_,i)=>[i, tpls.filter(t=>t.days.includes(i)).map(t=>({id:`w_${t.label}_${i}`,label:t.label,done:false,weekly:true}))])
 );
 
+// ─── Persistent Storage (localStorage + pending sync queue) ──────────────────
 const _store = {};
 const LS = {
-  get: (k,d) => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):(_store[k]??d); }catch{ return _store[k]??d; } },
-  set: (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} _store[k]=v; },
+  get: (k,d) => {
+    try { const v=localStorage.getItem(k); return v?JSON.parse(v):(_store[k]??d); }
+    catch { return _store[k]??d; }
+  },
+  set: (k,v) => {
+    try { localStorage.setItem(k,JSON.stringify(v)); }
+    catch(e) {
+      // Storage full or unavailable — keep in memory
+      console.warn("LS.set failed:", e);
+    }
+    _store[k]=v;
+  },
 };
 
+// ─── Timer State Persistence ──────────────────────────────────────────────────
+// We persist the timer's wall-clock start time so that even if the page is
+// hidden/frozen and then restored, elapsed time is computed from real clock.
+const TIMER_KEY = "tf_timerSession";
+
+function saveTimerSession(session) {
+  // session: { running, startWall, baseElapsed, mode, pomoDuration, selectedCat, sessionStartHour }
+  LS.set(TIMER_KEY, session);
+}
+
+function loadTimerSession() {
+  return LS.get(TIMER_KEY, null);
+}
+
+function clearTimerSession() {
+  LS.set(TIMER_KEY, null);
+}
+
+// ─── Offline / Online detection ───────────────────────────────────────────────
+function useOnlineStatus() {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on  = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online",  on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+  return online;
+}
+
+// ─── Wake Lock (prevent screen/tab sleep up to ~1h) ───────────────────────────
+function useWakeLock(enabled) {
+  const lockRef = useRef(null);
+
+  const acquire = useCallback(async () => {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      lockRef.current = await navigator.wakeLock.request("screen");
+    } catch(e) { /* denied / unavailable */ }
+  }, []);
+
+  const release = useCallback(() => {
+    if (lockRef.current) {
+      lockRef.current.release().catch(()=>{});
+      lockRef.current = null;
+    }
+  }, []);
+
+  // Re-acquire after tab becomes visible (OS may have released it)
+  useEffect(() => {
+    const onVisible = () => { if (enabled && document.visibilityState === "visible") acquire(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [enabled, acquire]);
+
+  useEffect(() => {
+    if (enabled) acquire(); else release();
+    return release;
+  }, [enabled, acquire, release]);
+}
+
+// ─── Notification helper ──────────────────────────────────────────────────────
 function notify(title, body) {
   if("Notification" in window && Notification.permission==="granted") new Notification(title,{body});
 }
@@ -83,27 +157,19 @@ function RingTimer({ elapsed, total, running, color }) {
 function TimelineBar({ logs, categories, date }) {
   const catMap = Object.fromEntries(categories.map(c=>[c.id,c]));
   const dayLogs = logs.filter(l=>l.date===date && l.startHour != null);
-  const HOURS = Array.from({length:24},(_,i)=>i);
-
-  // Build segments: each log has startHour (float, 0-24) and duration in sec
-  // We store startHour when recording starts
   const total = dayLogs.reduce((s,l)=>s+l.duration,0);
-
   return (
     <div>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
         <span style={{fontSize:11,color:"#6b7a99",fontWeight:700}}>24時間タイムライン</span>
         <span style={{fontSize:11,color:"#6b7a99"}}>{fmtHMS(total)||"0秒"}</span>
       </div>
-      {/* Timeline */}
       <div style={{position:"relative",height:56,background:"#161920",borderRadius:8,overflow:"hidden",border:"1px solid #2a2f3d",marginBottom:6}}>
-        {/* Hour grid lines */}
         {[6,9,12,15,18,21].map(h=>(
           <div key={h} style={{position:"absolute",left:`${(h/24)*100}%`,top:0,bottom:0,width:1,background:"#2a2f3d"}}>
             <span style={{position:"absolute",top:2,left:2,fontSize:8,color:"#3d4560"}}>{h}</span>
           </div>
         ))}
-        {/* Log segments */}
         {dayLogs.map((l,i)=>{
           const cat=catMap[l.catId];
           const left=(l.startHour/24)*100;
@@ -122,7 +188,6 @@ function TimelineBar({ logs, categories, date }) {
           );
         })}
       </div>
-      {/* Legend */}
       {dayLogs.length>0&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px"}}>
           {Object.entries(
@@ -142,7 +207,7 @@ function TimelineBar({ logs, categories, date }) {
   );
 }
 
-// ─── Category Dial (display only, reorder via CatManager) ────────────────────
+// ─── Category Dial ────────────────────────────────────────────────────────────
 function CategoryDial({ categories, selected, onSelect, disabled }) {
   const ref = useRef(null);
   useEffect(()=>{ const el=ref.current; if(!el) return; const idx=categories.findIndex(c=>c.id===selected); el.scrollLeft=idx*82-el.clientWidth/2+41; },[selected,categories]);
@@ -150,7 +215,7 @@ function CategoryDial({ categories, selected, onSelect, disabled }) {
     <div style={{marginBottom:14}}>
       <div style={{fontSize:11,color:"#6b7a99",fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー</div>
       <div ref={ref} style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 12px 6px",scrollSnapType:"x mandatory",scrollbarWidth:"none"}}>
-        {categories.map((c,i)=>{ const a=selected===c.id; return (
+        {categories.map((c)=>{ const a=selected===c.id; return (
           <div key={c.id} onClick={()=>!disabled&&onSelect(c.id)}
             style={{scrollSnapAlign:"center",flexShrink:0,width:72,padding:"10px 4px",borderRadius:10,
               border:`2px solid ${a?c.color:"#2a2f3d"}`,
@@ -173,7 +238,7 @@ function ColorPicker({ value, onChange }) {
   </div>;
 }
 
-// ─── TaskInput (uncontrolled – fixes iOS double-input) ────────────────────────
+// ─── TaskInput ────────────────────────────────────────────────────────────────
 function TaskInput({ onAdd, onCancel, inputStyle, btnStyle }) {
   const ref=useRef(null);
   const submit=()=>{ const v=ref.current?.value||""; if(v.trim()) onAdd(v.trim()); else onCancel(); };
@@ -301,7 +366,6 @@ function CatManagerModal({ categories, onChange, onClose }) {
         {cats.map((c,i)=>(
           <div key={c.id} style={{marginBottom:8,background:"#161920",borderRadius:10,padding:10,border:"1px solid #2a2f3d"}}>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {/* Up/Down arrows */}
               <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
                 <button onClick={()=>moveUp(i)} disabled={i===0} style={{background:i===0?"#1e2330":"#2a2f3d",border:"none",borderRadius:4,width:24,height:22,color:i===0?"#3d4560":"#e8ecf4",cursor:i===0?"not-allowed":"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
                 <button onClick={()=>moveDown(i)} disabled={i===cats.length-1} style={{background:i===cats.length-1?"#1e2330":"#2a2f3d",border:"none",borderRadius:4,width:24,height:22,color:i===cats.length-1?"#3d4560":"#e8ecf4",cursor:i===cats.length-1?"not-allowed":"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
@@ -362,13 +426,10 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
   const days=DAYS_LABEL.map((_,i)=>{ const wt=weeklyTasks[i]||[],ct=customTasks[i]||[],all=[...wt,...ct]; return {day:DAYS_LABEL[i],total:all.length,done:all.filter(t=>t.done).length}; });
   const totalT=days.reduce((s,d)=>s+d.total,0), doneT=days.reduce((s,d)=>s+d.done,0);
   const taskPct=totalT>0?Math.round(doneT/totalT*100):0;
-
-  // Study-only time for goal tracking
   const studyWeekTotal=logs.filter(l=>l.catId===studyCatId).reduce((s,l)=>s+l.duration,0);
   const studyTodayTotal=logs.filter(l=>l.catId===studyCatId&&l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
   const timePct=goalHours>0?Math.min(Math.round(studyWeekTotal/goalHours/3600*100),100):0;
   const goalReached = studyWeekTotal >= goalHours*3600;
-
   const todayTotal=logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
   const mon=getWeekMonday(); let diaryCount=0;
   for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(d.getDate()+i); if(diaries[fmtDate(d)]?.trim()) diaryCount++; }
@@ -387,7 +448,6 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
     </div>;
   };
 
-  // Selected day stats
   const selDate = fmtDate(getDayDate(selectedDay));
   const selLogs = logs.filter(l=>l.date===selDate);
   const selTotal = selLogs.reduce((s,l)=>s+l.duration,0);
@@ -397,13 +457,11 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
 
   return (
     <div style={{background:"#1e2330",borderRadius:12,border:"1px solid #2a2f3d",padding:14,marginBottom:12}}>
-      {/* Goal reached banner */}
       {goalReached&&(
         <div style={{background:"rgba(52,211,153,0.12)",border:"1px solid #34d399",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:BASE_FONT-2,color:"#34d399",fontWeight:700,textAlign:"center"}}>
           🎯 今週の勉強目標達成！{fmtHM(studyWeekTotal)} / {goalHours}h
         </div>
       )}
-      {/* Week rings */}
       <div style={{fontSize:BASE_FONT-2,fontWeight:800,marginBottom:10,color:"#6b7a99"}}>今週の進捗</div>
       <div style={{display:"flex",justifyContent:"space-around",marginBottom:14}}>
         <Ring pct={taskPct} color="#4f9eff" label="タスク" sub={`${doneT}/${totalT}`}/>
@@ -415,8 +473,6 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
           <div style={{fontSize:9,color:"#4f9eff"}}>{fmtHM(studyTodayTotal)||"0m"} 勉強</div>
         </div>
       </div>
-
-      {/* Day selector bar */}
       <div style={{display:"flex",gap:4,marginBottom:10}}>
         {days.map((d,i)=>{ const pct=d.total>0?d.done/d.total:0, isSel=i===selectedDay, isToday=i===todayDayIdx(); return (
           <div key={i} onClick={()=>onSelectDay(i)} style={{flex:1,textAlign:"center",cursor:"pointer"}}>
@@ -427,8 +483,6 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
           </div>
         );})}
       </div>
-
-      {/* Selected day detail */}
       <div style={{background:"#161920",borderRadius:8,padding:10,border:"1px solid #2a2f3d"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <span style={{fontSize:11,fontWeight:700,color:"#4f9eff"}}>{DAYS_LABEL[selectedDay]} {dayDateStr(selectedDay)} の進捗</span>
@@ -463,7 +517,6 @@ function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, on
 // ─── Long-Term Task Modal ─────────────────────────────────────────────────────
 function LongTermModal({ tasks, onSave, onClose }) {
   const [items, setItems] = useState(tasks.map(t=>({...t})));
-  const [newLabel, setNewLabel] = useState("");
   const [showDone, setShowDone] = useState(false);
   const newRef = useRef(null);
 
@@ -478,13 +531,11 @@ function LongTermModal({ tasks, onSave, onClose }) {
 
   const active = items.filter(t=>!t.done);
   const done   = items.filter(t=>t.done);
-
   const bS = bg => ({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2});
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={()=>{onSave(items);onClose();}}>
       <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"88vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
           <div>
             <div style={{fontSize:BASE_FONT+2,fontWeight:800}}>📌 中長期タスク</div>
@@ -492,8 +543,6 @@ function LongTermModal({ tasks, onSave, onClose }) {
           </div>
           <button style={bS("#4f9eff")} onClick={()=>{onSave(items);onClose();}}>保存</button>
         </div>
-
-        {/* Stats */}
         <div style={{display:"flex",gap:8,margin:"12px 0"}}>
           <div style={{flex:1,background:"#161920",borderRadius:8,padding:"8px 10px",textAlign:"center",border:"1px solid #2a2f3d"}}>
             <div style={{fontSize:18,fontWeight:800,color:"#4f9eff"}}>{active.length}</div>
@@ -504,20 +553,15 @@ function LongTermModal({ tasks, onSave, onClose }) {
             <div style={{fontSize:10,color:"#6b7a99"}}>完了済み</div>
           </div>
         </div>
-
-        {/* Add input */}
         <div style={{display:"flex",gap:6,marginBottom:12}}>
           <input ref={newRef} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"9px 12px",color:"#e8ecf4",fontSize:BASE_FONT-1,outline:"none",flex:1}} placeholder="新しいタスクを追加..." onKeyDown={e=>e.key==="Enter"&&add()}/>
           <button style={bS("#34d399")} onClick={add}>追加</button>
         </div>
-
         <div style={{overflowY:"auto",flex:1}}>
-          {/* Active tasks */}
           {active.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:16,fontSize:BASE_FONT-1}}>進行中のタスクはありません</div>}
           {active.map(t=>(
             <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 0",borderBottom:"1px solid #2a2f3d"}}>
-              <div onClick={()=>toggle(t.id)} style={{width:20,height:20,borderRadius:5,flexShrink:0,border:"2px solid #3d4560",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              </div>
+              <div onClick={()=>toggle(t.id)} style={{width:20,height:20,borderRadius:5,flexShrink:0,border:"2px solid #3d4560",background:"transparent",cursor:"pointer"}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:BASE_FONT-1,fontWeight:600}}>{t.label}</div>
                 <div style={{fontSize:10,color:"#3d4560",marginTop:2}}>追加: {t.createdAt}</div>
@@ -525,8 +569,6 @@ function LongTermModal({ tasks, onSave, onClose }) {
               <button onClick={()=>remove(t.id)} style={{background:"none",border:"none",color:"#3d4560",cursor:"pointer",fontSize:16,padding:"0 4px"}}>✕</button>
             </div>
           ))}
-
-          {/* Done section */}
           {done.length>0&&(
             <div style={{marginTop:16}}>
               <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700,padding:"4px 0",display:"flex",alignItems:"center",gap:6}}>
@@ -556,7 +598,6 @@ function LongTermModal({ tasks, onSave, onClose }) {
 // ─── Weekly Template Manager ──────────────────────────────────────────────────
 function WeeklyTemplateManager({ templates, onSave, onClose }) {
   const [tpls, setTpls] = useState(templates.map(t=>({...t, days:[...t.days]})));
-  const [newLabel, setNewLabel] = useState("");
   const newRef = useRef(null);
 
   const toggleDay = (idx, day) => {
@@ -595,7 +636,6 @@ function WeeklyTemplateManager({ templates, onSave, onClose }) {
               </div>
             </div>
           ))}
-          {/* Add new */}
           <div style={{background:"#161920",borderRadius:10,padding:10,border:"1px dashed #2a2f3d",marginBottom:8}}>
             <div style={{fontSize:10,color:"#6b7a99",marginBottom:6}}>新しい毎週タスクを追加</div>
             <div style={{display:"flex",gap:6}}>
@@ -606,6 +646,38 @@ function WeeklyTemplateManager({ templates, onSave, onClose }) {
         </div>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-1,paddingTop:10}}>キャンセル</button>
       </div>
+    </div>
+  );
+}
+
+// ─── Offline Banner ───────────────────────────────────────────────────────────
+function OfflineBanner({ online, justReconnected }) {
+  const [show, setShow] = useState(false);
+  const [reconnMsg, setReconnMsg] = useState(false);
+
+  useEffect(() => {
+    if (!online) { setShow(true); setReconnMsg(false); }
+    else if (justReconnected) {
+      setReconnMsg(true);
+      const t = setTimeout(() => setReconnMsg(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [online, justReconnected]);
+
+  if (online && !reconnMsg) return null;
+
+  return (
+    <div style={{
+      position:"fixed", top:0, left:0, right:0, zIndex:500,
+      background: online ? "rgba(52,211,153,0.95)" : "rgba(251,146,60,0.95)",
+      color:"#fff", textAlign:"center",
+      padding:"8px 16px", fontSize:13, fontWeight:700,
+      display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+      transition:"background 0.4s",
+    }}>
+      {online
+        ? "✅ オンラインに復帰しました。データを同期しました。"
+        : "📵 オフラインです。データはローカルに保存されます。"}
     </div>
   );
 }
@@ -638,12 +710,61 @@ export default function App() {
   const [showDiaryList,setShowDiaryList]= useState(false);
   const [goalHours,    setGoalHours]    = useState(()=>LS.get("tf_goalHours",    10));
   const [logSelectedDay, setLogSelectedDay] = useState(todayDayIdx());
+  const [justReconnected, setJustReconnected] = useState(false);
 
-  const intervalRef=useRef(null), startTimeRef=useRef(null), baseElapsedRef=useRef(0);
-  const sessionStartRef=useRef(null); // wall-clock start time for startHour
-  const pomoDone=mode==="pomodoro"&&elapsed>=pomoDuration*60;
+  // ── Timer refs (wall-clock based) ────────────────────────────────────────
+  // startWallRef: the Date.now() when the current running segment started
+  // baseElapsedRef: accumulated elapsed from previous segments (before current pause/resume)
+  const intervalRef       = useRef(null);
+  const startWallRef      = useRef(null);   // wall-clock ms when current segment started
+  const baseElapsedRef    = useRef(0);      // seconds accumulated before current segment
+  const sessionStartRef   = useRef(null);   // wall-clock Date of the very first start (for startHour)
 
-  // Persist
+  // ── Online status & reconnect detection ─────────────────────────────────
+  const online = useOnlineStatus();
+  const prevOnlineRef = useRef(online);
+  useEffect(() => {
+    if (!prevOnlineRef.current && online) {
+      // Just came back online — flush everything to localStorage (already done via LS.set)
+      setJustReconnected(true);
+      const t = setTimeout(() => setJustReconnected(false), 3500);
+      prevOnlineRef.current = true;
+      return () => clearTimeout(t);
+    }
+    prevOnlineRef.current = online;
+  }, [online]);
+
+  // ── Wake Lock while timer is running ────────────────────────────────────
+  useWakeLock(running);
+
+  // ── Restore timer session on mount (handles page reload / bg freeze) ────
+  useEffect(() => {
+    const saved = loadTimerSession();
+    if (saved && saved.running && saved.startWall) {
+      const nowMs    = Date.now();
+      const wallMs   = saved.startWall;
+      const segSec   = Math.floor((nowMs - wallMs) / 1000);
+      const total    = (saved.baseElapsed || 0) + segSec;
+
+      // Only restore if session is less than 4 hours old (safety net)
+      if (nowMs - wallMs < 4 * 3600 * 1000) {
+        baseElapsedRef.current  = total;
+        startWallRef.current    = nowMs;
+        sessionStartRef.current = saved.sessionStartWall ? new Date(saved.sessionStartWall) : new Date(wallMs);
+        setMode(saved.mode || "timer");
+        setPomoDuration(saved.pomoDuration || 25);
+        setSelectedCat(saved.selectedCat || DEFAULT_CATS[0].id);
+        setElapsed(total);
+        setRunning(true);
+      } else {
+        // Stale session — discard
+        clearTimerSession();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Persist all state to localStorage ───────────────────────────────────
   useEffect(()=>LS.set("tf_categories",  categories),  [categories]);
   useEffect(()=>LS.set("tf_selectedCat", selectedCat), [selectedCat]);
   useEffect(()=>LS.set("tf_weeklyTasks", weeklyTasks), [weeklyTasks]);
@@ -652,62 +773,116 @@ export default function App() {
   useEffect(()=>LS.set("tf_diaries",     diaries),     [diaries]);
   useEffect(()=>LS.set("tf_longTerm",    longTermTasks), [longTermTasks]);
   useEffect(()=>LS.set("tf_studyCatId",  studyCatId),  [studyCatId]);
+  useEffect(()=>LS.set("tf_goalHours",   goalHours),   [goalHours]);
 
-  // Splash screen: show for 2 seconds on first load
+  // ── Splash ───────────────────────────────────────────────────────────────
   useEffect(()=>{ const t=setTimeout(()=>setSplash(false), 2000); return ()=>clearTimeout(t); },[]);
 
-  const saveWeeklyTemplates = (tpls) => {
-    setWeeklyTemplates(tpls);
-    // Rebuild weeklyTasks from new templates (keep done states where possible)
-    setWeeklyTasks(prev => {
-      const next = buildWeeklyTasks(tpls);
-      // Carry over done state
-      DAYS_LABEL.forEach((_,i)=>{
-        next[i] = next[i].map(t=>{
-          const old = (prev[i]||[]).find(o=>o.id===t.id);
-          return old ? {...t, done:old.done} : t;
-        });
+  // ── Timer engine (wall-clock based, survives tab backgrounding) ──────────
+  useEffect(() => {
+    if (running) {
+      // Mark wall-clock start of this segment
+      startWallRef.current = Date.now();
+
+      // Persist session so we can restore after page reload / freeze
+      saveTimerSession({
+        running: true,
+        startWall: startWallRef.current,
+        baseElapsed: baseElapsedRef.current,
+        mode,
+        pomoDuration,
+        selectedCat,
+        sessionStartWall: sessionStartRef.current ? sessionStartRef.current.getTime() : Date.now(),
       });
-      return next;
-    });
-    setShowWeeklyMgr(false);
-  };
+
+      // Tick interval — computes elapsed from wall clock, not cumulative increments
+      intervalRef.current = setInterval(() => {
+        const segSec = Math.floor((Date.now() - startWallRef.current) / 1000);
+        const ne = baseElapsedRef.current + segSec;
+        setElapsed(ne);
+        // Pomo notification
+        if (mode === "pomodoro" && ne === pomoDuration * 60) {
+          notify("ポモドーロ完了！", `${pomoDuration}分経過！`);
+        }
+      }, 500);
+    } else {
+      clearInterval(intervalRef.current);
+      // Accumulate elapsed from the segment that just ended
+      if (startWallRef.current) {
+        const segSec = Math.floor((Date.now() - startWallRef.current) / 1000);
+        baseElapsedRef.current += segSec;
+        startWallRef.current = null;
+      }
+      // Update persisted session to paused state
+      if (baseElapsedRef.current > 0) {
+        saveTimerSession({
+          running: false,
+          startWall: null,
+          baseElapsed: baseElapsedRef.current,
+          mode,
+          pomoDuration,
+          selectedCat,
+          sessionStartWall: sessionStartRef.current ? sessionStartRef.current.getTime() : null,
+        });
+      }
+    }
+    return () => clearInterval(intervalRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
+  // ── Recover elapsed when tab returns from background ────────────────────
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && running && startWallRef.current) {
+        // Recalculate elapsed from wall clock immediately on tab focus
+        const segSec = Math.floor((Date.now() - startWallRef.current) / 1000);
+        const ne = baseElapsedRef.current + segSec;
+        setElapsed(ne);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [running]);
+
+  // ── Handle stop / record ────────────────────────────────────────────────
+  const handleStop = useCallback(() => {
+    setRunning(false);
+    // Flush any remaining segment
+    if (startWallRef.current) {
+      const segSec = Math.floor((Date.now() - startWallRef.current) / 1000);
+      baseElapsedRef.current += segSec;
+      startWallRef.current = null;
+    }
+    const total = baseElapsedRef.current;
+    if (total >= 5) {
+      const cat = categories.find(c=>c.id===selectedCat) || categories[0];
+      const startHour = sessionStartRef.current
+        ? sessionStartRef.current.getHours() + sessionStartRef.current.getMinutes() / 60
+        : null;
+      setLogs(p=>[{id:Date.now(),date:todayStr(),label:cat.name,catId:cat.id,duration:total,mode,startHour},...p]);
+    }
+    setElapsed(0);
+    baseElapsedRef.current = 0;
+    startWallRef.current   = null;
+    sessionStartRef.current = null;
+    clearTimerSession();
+  }, [categories, selectedCat, mode]);
+
+  // ── Start handler — record wall-clock session start ──────────────────────
+  const handleStart = useCallback(() => {
+    if (!sessionStartRef.current) sessionStartRef.current = new Date();
+    setRunning(true);
+    setTab("timer");
+  }, []);
+
+  const catColor = categories.find(c=>c.id===selectedCat)?.color || "#4f9eff";
+  const todayTotal = logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
+
+  const pomoDone = mode==="pomodoro" && elapsed >= pomoDuration*60;
 
   useEffect(()=>{
     if("Notification" in window&&Notification.permission==="default") Notification.requestPermission();
   },[]);
-
-  useEffect(()=>{
-    if(running){
-      if(!sessionStartRef.current) sessionStartRef.current=new Date();
-      startTimeRef.current=Date.now();
-      intervalRef.current=setInterval(()=>{
-        const ne=baseElapsedRef.current+Math.floor((Date.now()-startTimeRef.current)/1000);
-        setElapsed(ne);
-        if(mode==="pomodoro"&&ne===pomoDuration*60) notify("ポモドーロ完了！",`${pomoDuration}分経過！`);
-      },500);
-    } else {
-      clearInterval(intervalRef.current);
-      if(startTimeRef.current){ baseElapsedRef.current+=Math.floor((Date.now()-startTimeRef.current)/1000); startTimeRef.current=null; }
-    }
-    return ()=>clearInterval(intervalRef.current);
-  },[running,mode,pomoDuration]);
-
-  const handleStop=()=>{
-    setRunning(false);
-    const total=baseElapsedRef.current;
-    if(total>=5){
-      const cat=categories.find(c=>c.id===selectedCat)||categories[0];
-      const startHour = sessionStartRef.current
-        ? sessionStartRef.current.getHours()+sessionStartRef.current.getMinutes()/60
-        : null;
-      setLogs(p=>[{id:Date.now(),date:todayStr(),label:cat.name,catId:cat.id,duration:total,mode,startHour},...p]);
-    }
-    setElapsed(0); baseElapsedRef.current=0; startTimeRef.current=null; sessionStartRef.current=null;
-  };
-
-  const catColor=categories.find(c=>c.id===selectedCat)?.color||"#4f9eff";
-  const todayTotal=logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
 
   const toggleTask=(dayIdx,id,weekly)=>{
     if(weekly) setWeeklyTasks(p=>({...p,[dayIdx]:p[dayIdx].map(t=>t.id===id?{...t,done:!t.done}:t)}));
@@ -722,7 +897,18 @@ export default function App() {
     setMovePopup(null);
   };
   const saveDiary=(date,text)=>setDiaries(p=>({...p,[date]:text}));
-  const reorderCategories=(newOrder)=>setCategories(newOrder);
+
+  const saveWeeklyTemplates = (tpls) => {
+    setWeeklyTemplates(tpls);
+    setWeeklyTasks(prev => {
+      const next = buildWeeklyTasks(tpls);
+      DAYS_LABEL.forEach((_,i)=>{
+        next[i] = next[i].map(t=>{ const old=(prev[i]||[]).find(o=>o.id===t.id); return old?{...t,done:old.done}:t; });
+      });
+      return next;
+    });
+    setShowWeeklyMgr(false);
+  };
 
   const S={
     app:{minHeight:"100vh",background:"#0d0f14",color:"#e8ecf4",fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
@@ -736,12 +922,11 @@ export default function App() {
     btnSm:(a,c)=>({padding:"5px 10px",fontSize:BASE_FONT-2,fontWeight:700,border:`1px solid ${a?c:"#2a2f3d"}`,borderRadius:20,background:a?`rgba(${hexRgb(c)},0.2)`:"transparent",color:a?c:"#6b7a99",cursor:"pointer"}),
   };
 
-  // ── Task Tab ──────────────────────────────────────────────────────────────
+  // ── Task Tab ────────────────────────────────────────────────────────────
   const TaskTab=()=>{
     const mobile=window.innerWidth<640;
     return (
       <div>
-        {/* Timeline bar */}
         <div style={{...S.card,background:"#161920",borderColor:"rgba(79,158,255,0.2)"}}>
           <TimelineBar logs={logs} categories={categories} date={todayStr()}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
@@ -767,21 +952,11 @@ export default function App() {
             const dayDate=fmtDate(getDayDate(i)), hasDiary=diaries[dayDate]?.trim();
             return (
               <div key={i} style={{...S.card,padding:10,borderColor:isToday?catColor:"#2a2f3d",background:isToday?`rgba(${hexRgb(catColor)},0.06)`:"#1e2330"}}>
-                {/* Header */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:"#94a3b8"}}>{day}</span>
                     <span style={{fontSize:10,color:"#3d4560"}}>{dayDateStr(i)}</span>
-                    {/* diary button */}
-                    <button onClick={()=>setDiaryModal(dayDate)} style={{
-                      background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",
-                      border:`1.5px solid ${hasDiary?"#fbbf24":"#3d4560"}`,
-                      borderRadius:8, padding:"3px 8px", cursor:"pointer",
-                      fontSize:11, fontWeight:800,
-                      color:hasDiary?"#fbbf24":"#6b7a99",
-                      lineHeight:"18px", letterSpacing:0.3,
-                      boxShadow:hasDiary?"0 0 6px rgba(251,191,36,0.3)":"none",
-                    }}>
+                    <button onClick={()=>setDiaryModal(dayDate)} style={{background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",border:`1.5px solid ${hasDiary?"#fbbf24":"#3d4560"}`,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:11,fontWeight:800,color:hasDiary?"#fbbf24":"#6b7a99",lineHeight:"18px",boxShadow:hasDiary?"0 0 6px rgba(251,191,36,0.3)":"none"}}>
                       {hasDiary?"📔":"＋日記"}
                     </button>
                   </div>
@@ -806,12 +981,10 @@ export default function App() {
             );
           })}
         </div>
-        {/* 毎週タスク編集ボタン */}
         <button onClick={()=>setShowWeeklyMgr(true)} style={{width:"100%",background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"12px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700,marginTop:4}}>
           ⚙ 毎週タスクを編集
         </button>
 
-        {/* ── 中長期タスク ── */}
         <div style={{marginTop:16,borderTop:"1px dashed #2a2f3d",paddingTop:14}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div>
@@ -822,13 +995,11 @@ export default function App() {
               編集 / 追加
             </button>
           </div>
-          {/* Active long-term tasks preview */}
           {longTermTasks.filter(t=>!t.done).length===0
             ?<div style={{textAlign:"center",color:"#3d4560",fontSize:BASE_FONT-2,padding:"10px 0"}}>タスクなし　→「編集 / 追加」から追加できます</div>
             :longTermTasks.filter(t=>!t.done).map(t=>(
               <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#1e2330",borderRadius:8,marginBottom:6,border:"1px solid #2a2f3d"}}>
-                <div onClick={()=>setLongTermTasks(p=>p.map(x=>x.id===t.id?{...x,done:true,doneAt:todayStr()}:x))} style={{width:18,height:18,borderRadius:4,flexShrink:0,border:"2px solid #fb923c",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                </div>
+                <div onClick={()=>setLongTermTasks(p=>p.map(x=>x.id===t.id?{...x,done:true,doneAt:todayStr()}:x))} style={{width:18,height:18,borderRadius:4,flexShrink:0,border:"2px solid #fb923c",background:"transparent",cursor:"pointer"}}/>
                 <span style={{fontSize:BASE_FONT-1,flex:1}}>{t.label}</span>
                 <span style={{fontSize:10,color:"#3d4560"}}>{t.createdAt}</span>
               </div>
@@ -843,6 +1014,8 @@ export default function App() {
       </div>
     );
   };
+
+  // ── Timer Tab ────────────────────────────────────────────────────────────
   const TimerTab=()=>(
     <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:400,margin:"0 auto"}}>
       {!running&&(
@@ -874,7 +1047,7 @@ export default function App() {
       )}
       <div style={{display:"flex",justifyContent:"center",gap:10}}>
         {!running
-          ?<button style={{...S.btn("#34d399"),padding:"14px 48px",fontSize:16,borderRadius:50}} onClick={()=>{setRunning(true);setTab("timer");}}>▶ 開始</button>
+          ?<button style={{...S.btn("#34d399"),padding:"14px 48px",fontSize:16,borderRadius:50}} onClick={handleStart}>▶ 開始</button>
           :<>
             <button style={{...S.btn("#fb923c"),padding:"14px 28px",fontSize:15,borderRadius:50}} onClick={()=>setRunning(false)}>⏸ 一時停止</button>
             <button style={{...S.btn("#f87171"),padding:"14px 24px",fontSize:15,borderRadius:50}} onClick={handleStop}>■ 終了・記録</button>
@@ -885,7 +1058,7 @@ export default function App() {
     </div>
   );
 
-  // ── Log Tab ───────────────────────────────────────────────────────────────
+  // ── Log Tab ──────────────────────────────────────────────────────────────
   const LogTab=()=>{
     const [editGoal,setEditGoal]=useState(false);
     const [gInput,setGInput]=useState(String(goalHours));
@@ -895,7 +1068,6 @@ export default function App() {
     return (
       <div>
         <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay} studyCatId={studyCatId}/>
-        {/* Study cat + goal settings */}
         <div style={{...S.card,marginBottom:12}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
             <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標対象カテゴリー</span>
@@ -957,10 +1129,12 @@ export default function App() {
 
   return (
     <div style={S.app}>
-      {/* ── Splash Screen ── */}
+      {/* Offline / reconnect banner */}
+      <OfflineBanner online={online} justReconnected={justReconnected} />
+
+      {/* Splash Screen */}
       {splash&&(
-        <div style={{position:"fixed",inset:0,zIndex:999,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",transition:"opacity 0.5s",opacity:1}}>
-          {/* Animated ring */}
+        <div style={{position:"fixed",inset:0,zIndex:999,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
           <svg width="100" height="100" viewBox="0 0 100 100" style={{marginBottom:24}}>
             <defs>
               <filter id="sp-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -970,14 +1144,16 @@ export default function App() {
               strokeDasharray={2*Math.PI*38} strokeDashoffset={2*Math.PI*38*0.25}
               transform="rotate(-90 50 50)" filter="url(#sp-glow)"
               style={{animation:"spin 1.4s linear infinite"}}/>
-            {/* Check icon */}
             <polyline points="30,52 44,66 70,38" fill="none" stroke="#4f9eff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" filter="url(#sp-glow)"/>
             <style>{`@keyframes spin{from{stroke-dashoffset:${2*Math.PI*38}}to{stroke-dashoffset:${-2*Math.PI*38}}}`}</style>
           </svg>
           <div style={{fontSize:28,fontWeight:900,color:"#e8ecf4",letterSpacing:"-0.5px",marginBottom:6}}>TimeFlow</div>
           <div style={{fontSize:13,color:"#6b7a99",letterSpacing:2}}>タスク & 時間管理</div>
+          {/* Show offline indicator on splash if already offline */}
+          {!online&&<div style={{marginTop:20,fontSize:12,color:"#fb923c",fontWeight:700}}>📵 オフラインモード</div>}
         </div>
       )}
+
       {/* Full-screen timer when running and not on timer tab */}
       {running&&tab!=="timer"&&(
         <div style={{position:"fixed",inset:0,zIndex:90,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
@@ -997,6 +1173,8 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div><div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div><div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理</div></div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
+            {/* Offline dot */}
+            <div title={online?"オンライン":"オフライン"} style={{width:7,height:7,borderRadius:"50%",background:online?"#34d399":"#fb923c",boxShadow:online?"0 0 6px #34d399":"0 0 6px #fb923c",transition:"background 0.4s"}}/>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:running?"#34d399":"#3d4560",boxShadow:running?"0 0 8px #34d399":"none"}}/>
