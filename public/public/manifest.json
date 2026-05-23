@@ -1,24 +1,24 @@
 {
+  "name": "TimeFlow",
   "short_name": "TimeFlow",
-  "name": "TimeFlow - タスク & 時間管理",
-  "description": "タスク管理・時間記録・日記アプリ",
+  "description": "タスク & 時間管理アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f14",
+  "theme_color": "#0d0f14",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
-      "type": "image/png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
-      "type": "image/png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0d0f14",
-  "background_color": "#0d0f14"
+  ]
 }
