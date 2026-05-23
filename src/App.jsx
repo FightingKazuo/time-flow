@@ -761,8 +761,7 @@ export default function App() {
         clearTimerSession();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line
 
   // ── Persist all state to localStorage ───────────────────────────────────
   useEffect(()=>LS.set("tf_categories",  categories),  [categories]);
@@ -827,8 +826,7 @@ export default function App() {
       }
     }
     return () => clearInterval(intervalRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
+  }, [running]); // eslint-disable-line
 
   // ── Recover elapsed when tab returns from background ────────────────────
   useEffect(() => {
