@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
-import { hexRgb } from "../../constants";
+import { useState } from "react";
+import { BASE_FONT, hexRgb } from "../../constants";
+
 export default function EditLogModal({ log, categories, onSave, onClose }) {
   const [dur,setDur]=useState(Math.floor(log.duration/60));
   const [label,setLabel]=useState(log.label);
@@ -24,6 +24,4 @@ export default function EditLogModal({ log, categories, onSave, onClose }) {
     </div>
   );
 }
-
-// ─── Cat Manager ─────────────────────────────────────────────────────────────
 
