@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
+import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
 import { hexRgb } from "../../constants";
 export default function EditLogModal({ log, categories, onSave, onClose }) {
   const [dur,setDur]=useState(Math.floor(log.duration/60));
