@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
+import { useState, useRef } from "react";
+import { BASE_FONT, fmtHM, todayStr } from "../../constants";
 
 export default function BackupModal({ data, onRestore, onClose }) {
   const [mode,setMode]=useState("menu");
