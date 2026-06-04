@@ -34,6 +34,7 @@ export default function App() {
   const [longTermTasks, setLongTermTasks] = useState(()=>LS.get("tf_longTerm", []));
   const [showLongTerm,  setShowLongTerm]  = useState(false);
   const [splash,        setSplash]        = useState(true);
+  useEffect(()=>{ const t=setTimeout(()=>setSplash(false), 2000); return ()=>clearTimeout(t); }, []);
   const [weekHistory,   setWeekHistory]   = useState(()=>LS.get("tf_weekHistory", []));
   const [showWeekHistory, setShowWeekHistory] = useState(false);
   const [weeklyTasks,  setWeeklyTasks]  = useState(()=>LS.get("tf_weeklyTasks",  buildWeeklyTasks(WEEKLY_DEFAULTS)));
