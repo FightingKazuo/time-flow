@@ -1,51 +1,164 @@
-import { useState, useEffect, useRef } from "react";
-import { notify, todayStr } from "../constants";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { notify, todayStr, LS } from "../constants";
 
-export function useTimer({ categories, selectedCat, mode, pomoDuration }) {
+const AUTO_STOP_SEC = 2 * 3600; // 2時間
+const LS_START_KEY  = "tf_timer_start";   // { wallStart, base, sessionStart, mode, catId }
+
+export function useTimer({ categories, selectedCat, mode, pomoDuration, onAutoStop }) {
   const [elapsed,  setElapsed]  = useState(0);
   const [running,  setRunning]  = useState(false);
-  const intervalRef    = useRef(null);
-  const startTimeRef   = useRef(null);
-  const baseElapsedRef = useRef(0);
-  const sessionStartRef= useRef(null);
+  const intervalRef     = useRef(null);
+  const startTimeRef    = useRef(null);   // Date.now() of last resume
+  const baseElapsedRef  = useRef(0);
+  const sessionStartRef = useRef(null);   // actual session start (Date object)
+  const wakeLockRef     = useRef(null);
 
-  useEffect(()=>{
-    if(running){
-      if(!sessionStartRef.current) sessionStartRef.current = new Date();
-      startTimeRef.current = Date.now();
-      intervalRef.current = setInterval(()=>{
-        const ne = baseElapsedRef.current + Math.floor((Date.now()-startTimeRef.current)/1000);
-        setElapsed(ne);
-        if(mode==="pomodoro" && ne===pomoDuration*60)
-          notify("ポモドーロ完了！",`${pomoDuration}分経過！`);
-      }, 500);
-    } else {
-      clearInterval(intervalRef.current);
-      if(startTimeRef.current){
-        baseElapsedRef.current += Math.floor((Date.now()-startTimeRef.current)/1000);
-        startTimeRef.current = null;
+  // ── Restore from localStorage (app killed while running) ─────────────────
+  useEffect(() => {
+    const saved = LS.get(LS_START_KEY, null);
+    if(saved) {
+      const wallStart   = new Date(saved.wallStart);
+      const nowSec      = Math.floor((Date.now() - wallStart.getTime()) / 1000);
+      const totalSec    = saved.base + nowSec;
+
+      if(totalSec >= AUTO_STOP_SEC) {
+        // 2時間超えてたら復帰時点で自動停止通知
+        LS.set(LS_START_KEY, null);
+        if(onAutoStop) onAutoStop({ duration: totalSec, savedState: saved });
+      } else {
+        // 復帰して継続
+        sessionStartRef.current = wallStart;
+        baseElapsedRef.current  = saved.base;
+        startTimeRef.current    = Date.now() - nowSec * 1000 + saved.base * 1000;
+        setElapsed(totalSec);
+        setRunning(true);
       }
     }
+  }, []); // eslint-disable-line
+
+  // ── Wake Lock ─────────────────────────────────────────────────────────────
+  const acquireWakeLock = useCallback(async () => {
+    if(!('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      wakeLockRef.current.addEventListener('release', () => { wakeLockRef.current = null; });
+    } catch(e) {}
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    if(wakeLockRef.current) { wakeLockRef.current.release().catch(()=>{}); wakeLockRef.current = null; }
+  }, []);
+
+  // Re-acquire wake lock when app returns to foreground
+  useEffect(() => {
+    const onVisible = () => {
+      if(document.visibilityState === 'visible' && running) acquireWakeLock();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [running, acquireWakeLock]);
+
+  // ── Visibility correction (wall-clock diff) ───────────────────────────────
+  useEffect(() => {
+    const onVisible = () => {
+      if(document.visibilityState !== 'visible' || !running) return;
+
+      // Recalculate from session wall-clock start
+      if(sessionStartRef.current) {
+        const wallElapsed = Math.floor((Date.now() - sessionStartRef.current.getTime()) / 1000);
+        const corrected   = wallElapsed;
+
+        // Auto-stop check
+        if(corrected >= AUTO_STOP_SEC) {
+          _forceStop(corrected);
+          return;
+        }
+
+        // Correct display + restart interval
+        clearInterval(intervalRef.current);
+        baseElapsedRef.current = corrected;
+        startTimeRef.current   = Date.now();
+        setElapsed(corrected);
+
+        intervalRef.current = setInterval(() => {
+          const ne = Math.floor((Date.now() - sessionStartRef.current.getTime()) / 1000);
+          setElapsed(ne);
+          if(ne >= AUTO_STOP_SEC) { _forceStop(ne); return; }
+          if(mode === "pomodoro" && ne === pomoDuration * 60)
+            notify("ポモドーロ完了！", `${pomoDuration}分経過！`);
+        }, 1000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [running, mode, pomoDuration]);
+
+  // ── Main interval ─────────────────────────────────────────────────────────
+  const _forceStop = useCallback((total) => {
+    clearInterval(intervalRef.current);
+    setRunning(false);
+    releaseWakeLock();
+    LS.set(LS_START_KEY, null);
+    if(onAutoStop) onAutoStop({ duration: total, savedState: { catId: selectedCat, mode, sessionStart: sessionStartRef.current?.toISOString() } });
+    setElapsed(total);
+    baseElapsedRef.current  = total;
+  }, [onAutoStop, selectedCat, mode, releaseWakeLock]);
+
+  useEffect(() => {
+    if(running) {
+      if(!sessionStartRef.current) sessionStartRef.current = new Date();
+      startTimeRef.current = Date.now();
+      acquireWakeLock();
+
+      // Persist start info to localStorage
+      LS.set(LS_START_KEY, {
+        wallStart:    sessionStartRef.current.toISOString(),
+        base:         baseElapsedRef.current,
+        sessionStart: sessionStartRef.current.toISOString(),
+        mode,
+        catId:        selectedCat,
+      });
+
+      intervalRef.current = setInterval(() => {
+        const ne = Math.floor((Date.now() - sessionStartRef.current.getTime()) / 1000);
+        setElapsed(ne);
+        if(ne >= AUTO_STOP_SEC) { _forceStop(ne); return; }
+        if(mode === "pomodoro" && ne === pomoDuration * 60)
+          notify("ポモドーロ完了！", `${pomoDuration}分経過！`);
+      }, 1000);
+    } else {
+      clearInterval(intervalRef.current);
+      if(startTimeRef.current) {
+        baseElapsedRef.current += Math.floor((Date.now() - startTimeRef.current) / 1000);
+        startTimeRef.current = null;
+      }
+      releaseWakeLock();
+      LS.set(LS_START_KEY, null);
+    }
     return () => clearInterval(intervalRef.current);
-  },[running, mode, pomoDuration]);
+  }, [running, mode, pomoDuration, selectedCat]);
 
   const start = () => setRunning(true);
-  const pause = () => setRunning(false);
+  const pause = () => { setRunning(false); };
 
   const stop = (onSave) => {
     setRunning(false);
-    const total = baseElapsedRef.current;
-    if(total >= 5){
-      const cat = categories.find(c=>c.id===selectedCat) || categories[0];
+    const total = Math.max(
+      baseElapsedRef.current,
+      sessionStartRef.current ? Math.floor((Date.now() - sessionStartRef.current.getTime()) / 1000) : 0
+    );
+    if(total >= 5) {
+      const cat = categories.find(c => c.id === selectedCat) || categories[0];
       const startHour = sessionStartRef.current
-        ? sessionStartRef.current.getHours() + sessionStartRef.current.getMinutes()/60
+        ? sessionStartRef.current.getHours() + sessionStartRef.current.getMinutes() / 60
         : null;
-      onSave({ id:Date.now(), date:todayStr(), label:cat.name, catId:cat.id, duration:total, mode, startHour });
+      onSave({ id: Date.now(), date: todayStr(), label: cat.name, catId: cat.id, duration: total, mode, startHour });
     }
     setElapsed(0);
-    baseElapsedRef.current = 0;
-    startTimeRef.current   = null;
-    sessionStartRef.current= null;
+    baseElapsedRef.current  = 0;
+    startTimeRef.current    = null;
+    sessionStartRef.current = null;
+    LS.set(LS_START_KEY, null);
   };
 
   return { elapsed, running, start, pause, stop };
