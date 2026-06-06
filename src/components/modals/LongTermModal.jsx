@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
+import { useState, useRef } from "react";
+import { BASE_FONT, todayStr } from "../../constants";
 
 export default function LongTermModal({ tasks, onSave, onClose }) {
   const [items, setItems]     = useState(tasks.map(t=>({...t})));
@@ -37,7 +37,7 @@ export default function LongTermModal({ tasks, onSave, onClose }) {
   const iS = {background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"};
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={()=>{onSave(items);onClose();}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:500}} onClick={()=>{onSave(items);onClose();}}>
       <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>

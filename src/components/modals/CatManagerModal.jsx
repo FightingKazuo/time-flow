@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
+import { useState } from "react";
+import { BASE_FONT, PRESET_COLORS } from "../../constants";
 import ColorPicker from "../ColorPicker";
+
 export default function CatManagerModal({ categories, onChange, onClose }) {
   const [cats,setCats]=useState(categories.map(c=>({...c})));
   const [newName,setNewName]=useState(""); const [newColor,setNewColor]=useState(PRESET_COLORS[0]); const [editing,setEditing]=useState(null);
@@ -11,7 +12,7 @@ export default function CatManagerModal({ categories, onChange, onClose }) {
   const moveDown = i => { if(i===cats.length-1) return; const a=[...cats]; [a[i],a[i+1]]=[a[i+1],a[i]]; setCats(a); };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:500}} onClick={onClose}>
       <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"82vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <span style={{fontSize:BASE_FONT+2,fontWeight:800}}>カテゴリー管理</span>

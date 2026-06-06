@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
-import { BASE_FONT, DAYS_LABEL, PRESET_COLORS, WEEKLY_DEFAULTS, todayStr, dayDateStr, hexRgb, fmtHM, fmtHMS, pad } from "../../constants";
+import { useState } from "react";
+import { BASE_FONT, DAYS_LABEL, fmtHM } from "../../constants";
 
 export default function WeekHistoryModal({ history, onClose }) {
   const [selected, setSelected] = useState(null);
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:500}} onClick={onClose}>
       <div style={{background:"#1e2330",borderRadius:"20px 20px 0 0",border:"1px solid #2a2f3d",padding:20,width:"100%",maxWidth:480,maxHeight:"88vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <div style={{fontSize:BASE_FONT+2,fontWeight:800}}>📅 週間履歴</div>

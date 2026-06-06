@@ -7,7 +7,7 @@ export default function EditLogModal({ log, categories, onSave, onClose }) {
   const [catId,setCatId]=useState(log.catId);
   const iS={background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 12px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",width:"100%",boxSizing:"border-box"};
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500}} onClick={onClose}>
       <div style={{background:"#1e2330",borderRadius:16,border:"1px solid #2a2f3d",padding:24,width:320,maxWidth:"90vw"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:BASE_FONT+2,fontWeight:800,marginBottom:16}}>記録を編集</div>
         <div style={{fontSize:11,color:"#6b7a99",marginBottom:4}}>内容</div><input style={iS} value={label} onChange={e=>setLabel(e.target.value)}/>
