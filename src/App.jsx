@@ -69,12 +69,16 @@ export default function App() {
   const [showDiaryList,setShowDiaryList]= useState(false);
   const [goalHours,    setGoalHours]    = useState(()=>LS.get("tf_goalHours",    10));
   const [logSelectedDay, setLogSelectedDay] = useState(todayDayIdx());
-
-
+  const [autoStopInfo,  setAutoStopInfo]  = useState(null); // {duration, savedState} — 自動停止バナー用
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { elapsed, running, start: timerStart, pause: timerPause, stop: timerStop } = useTimer({
     categories, selectedCat, mode, pomoDuration,
+    onAutoStop: (info) => {
+      setAutoStopInfo(info);
+      setTab("log"); // 記録タブへ自動遷移
+      notify("⏱ タイマー自動停止", "2時間を超えたため自動停止しました。時間を確認してください。");
+    },
   });
   const pomoDone = mode==="pomodoro" && elapsed>=pomoDuration*60;
 
@@ -307,70 +311,229 @@ export default function App() {
 
   // ── Log Tab ───────────────────────────────────────────────────────────────
   const LogTab=()=>{
+    const [view, setView] = useState("heatmap"); // "heatmap" | "list"
     const [editGoal,setEditGoal]=useState(false);
     const [gInput,setGInput]=useState(String(goalHours));
-    const byDate={};
-    logs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
-    const dates=Object.keys(byDate).sort().reverse();
+    const [tooltip, setTooltip] = useState(null); // {date, x, y}
+
+    // ── Heatmap view ──
+    const HeatmapView = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+
+      // Build date→studySeconds map
+      const dateMap = {};
+      logs.filter(l=>l.catId===studyCatId).forEach(l=>{
+        dateMap[l.date] = (dateMap[l.date]||0) + l.duration;
+      });
+
+      // Year total
+      const yearTotal = Object.entries(dateMap)
+        .filter(([d])=>d.startsWith(String(year)))
+        .reduce((s,[,v])=>s+v, 0);
+
+      // Max per day for color scaling
+      const maxSec = Math.max(...Object.values(dateMap), 3600);
+
+      // Color based on hours
+      const getColor = (sec) => {
+        if(!sec) return "#1e2330";
+        const h = sec/3600;
+        if(h < 0.5) return "#0d2137";
+        if(h < 2)   return "#1a4a7a";
+        if(h < 4)   return "#2563a8";
+        if(h < 6)   return "#3b82d4";
+        return "#4f9eff";
+      };
+
+      // Generate weeks for this year
+      const jan1 = new Date(year, 0, 1);
+      const startDay = jan1.getDay(); // 0=Sun
+      const weeks = [];
+      let cur = new Date(jan1);
+      cur.setDate(cur.getDate() - startDay);
+      while(cur.getFullYear() <= year) {
+        const week = [];
+        for(let d=0;d<7;d++){
+          const dt = new Date(cur);
+          week.push(dt);
+          cur.setDate(cur.getDate()+1);
+        }
+        weeks.push(week);
+        if(cur.getFullYear() > year && cur.getMonth() > 0) break;
+      }
+
+      const fmt = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+      const CELL = 13, GAP = 3;
+      const DAY_LABELS = ["日","月","火","水","木","金","土"];
+      const MONTH_LABELS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+
+      return (
+        <div>
+          {/* Header stats */}
+          <div style={{...S.card,background:"#161920",marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div>
+                <div style={{fontSize:11,color:"#6b7a99"}}>📊 {year}年 年間{categories.find(c=>c.id===studyCatId)?.name||"勉強"}時間</div>
+                <div style={{fontSize:28,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHM(yearTotal)}</div>
+                <div style={{fontSize:11,color:"#6b7a99"}}>{fmtHMS(yearTotal)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:11,color:"#6b7a99"}}>記録日数</div>
+                <div style={{fontSize:22,fontWeight:800,color:"#34d399"}}>{Object.keys(dateMap).filter(d=>d.startsWith(String(year))).length}<span style={{fontSize:13}}>日</span></div>
+              </div>
+            </div>
+            {/* Legend */}
+            <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}>
+              <span style={{fontSize:10,color:"#6b7a99"}}>少</span>
+              {["#1e2330","#0d2137","#1a4a7a","#2563a8","#3b82d4","#4f9eff"].map(c=>(
+                <div key={c} style={{width:CELL,height:CELL,borderRadius:3,background:c}}/>
+              ))}
+              <span style={{fontSize:10,color:"#6b7a99"}}>多</span>
+            </div>
+          </div>
+
+          {/* Heatmap scroll */}
+          <div style={{overflowX:"auto",paddingBottom:8}}>
+            <div style={{display:"flex",gap:0}}>
+              {/* Day labels */}
+              <div style={{display:"flex",flexDirection:"column",gap:GAP,marginRight:4,paddingTop:18}}>
+                {DAY_LABELS.map((d,i)=>(
+                  <div key={i} style={{height:CELL,fontSize:9,color:"#3d4560",display:"flex",alignItems:"center"}}>{i%2===0?d:""}</div>
+                ))}
+              </div>
+              {/* Weeks */}
+              <div style={{display:"flex",gap:GAP}}>
+                {weeks.map((week,wi)=>(
+                  <div key={wi} style={{display:"flex",flexDirection:"column",gap:GAP}}>
+                    {/* Month label on first week of month */}
+                    <div style={{height:14,fontSize:9,color:"#6b7a99",whiteSpace:"nowrap"}}>
+                      {week[0].getDate()<=7&&week[0].getFullYear()===year?MONTH_LABELS[week[0].getMonth()]:""}
+                    </div>
+                    {week.map((day,di)=>{
+                      const ds = fmt(day);
+                      const sec = dateMap[ds]||0;
+                      const isThisYear = day.getFullYear()===year;
+                      const isToday = ds===todayStr();
+                      return (
+                        <div
+                          key={di}
+                          onClick={e=>{
+                            if(!sec||!isThisYear) return;
+                            setTooltip(t=>t?.date===ds?null:{date:ds,sec});
+                          }}
+                          style={{
+                            width:CELL, height:CELL,
+                            borderRadius:3,
+                            background:isThisYear?getColor(sec):"transparent",
+                            border:isToday?"1.5px solid #4f9eff":"1.5px solid transparent",
+                            cursor:sec&&isThisYear?"pointer":"default",
+                            flexShrink:0,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tooltip */}
+          {tooltip&&(
+            <div style={{...S.card,margin:"8px 0",background:"#161920",borderColor:"#4f9eff"}}>
+              <div style={{fontSize:12,color:"#4f9eff",fontWeight:700,marginBottom:4}}>{tooltip.date}</div>
+              <div style={{fontSize:18,fontWeight:800,color:"#e8ecf4"}}>{fmtHMS(tooltip.sec)}</div>
+              {diaries[tooltip.date]?.trim()&&(
+                <button onClick={()=>setDiaryModal(tooltip.date)} style={{marginTop:6,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"3px 10px",color:"#fbbf24",fontSize:11,cursor:"pointer",fontWeight:700}}>📔 この日の日記を見る</button>
+              )}
+            </div>
+          )}
+
+          {/* Settings */}
+          <div style={{...S.card,marginTop:8}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
+              <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
+                {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
+              {editGoal
+                ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
+                :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
+              }
+            </div>
+          </div>
+
+          <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay} studyCatId={studyCatId}/>
+        </div>
+      );
+    };
+
+    // ── List view ──
+    const ListView = () => {
+      const byDate={};
+      logs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
+      const dates=Object.keys(byDate).sort().reverse();
+      return (
+        <div>
+          {logs.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
+          {dates.map(date=>{
+            const dl=byDate[date], total=dl.reduce((s,l)=>s+l.duration,0);
+            const byCat={}; dl.forEach(l=>{ byCat[l.catId]=(byCat[l.catId]||0)+l.duration; });
+            return (
+              <div key={date} style={{marginBottom:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:BASE_FONT,fontWeight:800,color:catColor}}>{date}</span>
+                    {diaries[date]?.trim()&&<button onClick={()=>setDiaryModal(date)} style={{background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"2px 7px",color:"#fbbf24",fontSize:10,cursor:"pointer",fontWeight:700}}>📔</button>}
+                  </div>
+                  <span style={{fontSize:BASE_FONT-1,color:"#34d399",fontWeight:700}}>{fmtHMS(total)}</span>
+                </div>
+                <div style={{height:4,borderRadius:2,background:"#1e2330",display:"flex",overflow:"hidden",marginBottom:8}}>
+                  {Object.entries(byCat).map(([cid,dur])=>{ const cat=categories.find(c=>c.id===cid); return <div key={cid} style={{width:`${(dur/86400)*100}%`,background:cat?.color||"#6b7a99",minWidth:dur>60?2:0}}/>; })}
+                </div>
+                {dl.map(l=>{ const cat=categories.find(c=>c.id===l.catId); return (
+                  <div key={l.id} style={{...S.card,display:"flex",alignItems:"center",gap:8,padding:"9px 12px",marginBottom:6}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:cat?.color||"#6b7a99",flexShrink:0}}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:BASE_FONT,fontWeight:700}}>{l.label}</div>
+                      <div style={{fontSize:10,color:"#6b7a99",marginTop:1}}>{l.mode==="pomodoro"?"🍅":"⏱"}{cat&&<span style={{marginLeft:4,color:cat.color}}>#{cat.name}</span>}{l.startHour!=null&&<span style={{marginLeft:6,color:"#3d4560"}}>{Math.floor(l.startHour)}:{pad(Math.round((l.startHour%1)*60))}〜</span>}</div>
+                    </div>
+                    <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#e8ecf4",textAlign:"right"}}>
+                      <div style={{fontFamily:"monospace"}}>{fmtTime(l.duration)}</div>
+                      <div style={{fontSize:10,color:"#6b7a99"}}>{fmtHMS(l.duration)}</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                      <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#94a3b8",cursor:"pointer",fontSize:10}} onClick={()=>setEditingLog(l)}>編集</button>
+                      <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#f87171",cursor:"pointer",fontSize:10}} onClick={()=>setLogs(p=>p.filter(x=>x.id!==l.id))}>削除</button>
+                    </div>
+                  </div>
+                );})}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
     return (
       <div>
-        <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay} studyCatId={studyCatId}/>
-        {/* Study cat + goal settings */}
-        <div style={{...S.card,marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標対象カテゴリー</span>
-            <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
-              {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
-            {editGoal
-              ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
-              :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
-            }
-          </div>
+        {/* View toggle */}
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <button onClick={()=>setView("heatmap")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1px solid ${view==="heatmap"?"#4f9eff":"#2a2f3d"}`,background:view==="heatmap"?"rgba(79,158,255,0.12)":"#1e2330",color:view==="heatmap"?"#4f9eff":"#6b7a99",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2}}>
+            📅 ヒートマップ
+          </button>
+          <button onClick={()=>setView("list")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1px solid ${view==="list"?"#4f9eff":"#2a2f3d"}`,background:view==="list"?"rgba(79,158,255,0.12)":"#1e2330",color:view==="list"?"#4f9eff":"#6b7a99",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2}}>
+            📋 詳細記録
+          </button>
+          <button onClick={()=>setShowDiaryList(true)} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #fbbf2440",background:"rgba(251,191,36,0.08)",color:"#fbbf24",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2}}>
+            📔
+          </button>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <span style={{fontSize:BASE_FONT+1,fontWeight:800}}>📊 記録</span>
-          <button onClick={()=>setShowDiaryList(true)} style={{background:"rgba(251,191,36,0.1)",border:"1px solid #fbbf2440",borderRadius:8,padding:"5px 10px",color:"#fbbf24",fontSize:BASE_FONT-2,cursor:"pointer",fontWeight:600}}>📔 日記一覧</button>
-        </div>
-        {logs.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:40,fontSize:BASE_FONT}}>記録がありません。<br/>タイマーで計測を始めましょう！</div>}
-        {dates.map(date=>{
-          const dl=byDate[date], total=dl.reduce((s,l)=>s+l.duration,0);
-          const byCat={}; dl.forEach(l=>{ byCat[l.catId]=(byCat[l.catId]||0)+l.duration; });
-          return (
-            <div key={date} style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:BASE_FONT,fontWeight:800,color:catColor}}>{date}</span>
-                  {diaries[date]?.trim()&&<button onClick={()=>setDiaryModal(date)} style={{background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"2px 7px",color:"#fbbf24",fontSize:10,cursor:"pointer",fontWeight:700}}>📔</button>}
-                </div>
-                <span style={{fontSize:BASE_FONT-1,color:"#34d399",fontWeight:700}}>{fmtHMS(total)}</span>
-              </div>
-              <div style={{height:4,borderRadius:2,background:"#1e2330",display:"flex",overflow:"hidden",marginBottom:8}}>
-                {Object.entries(byCat).map(([cid,dur])=>{ const cat=categories.find(c=>c.id===cid); return <div key={cid} style={{width:`${(dur/86400)*100}%`,background:cat?.color||"#6b7a99",minWidth:dur>60?2:0}}/>; })}
-              </div>
-              {dl.map(l=>{ const cat=categories.find(c=>c.id===l.catId); return (
-                <div key={l.id} style={{...S.card,display:"flex",alignItems:"center",gap:8,padding:"9px 12px",marginBottom:6}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:cat?.color||"#6b7a99",flexShrink:0}}/>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:BASE_FONT,fontWeight:700}}>{l.label}</div>
-                    <div style={{fontSize:10,color:"#6b7a99",marginTop:1}}>{l.mode==="pomodoro"?"🍅":"⏱"}{cat&&<span style={{marginLeft:4,color:cat.color}}>#{cat.name}</span>}{l.startHour!=null&&<span style={{marginLeft:6,color:"#3d4560"}}>{Math.floor(l.startHour)}:{pad(Math.round((l.startHour%1)*60))}〜</span>}</div>
-                  </div>
-                  <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#e8ecf4",textAlign:"right"}}>
-                    <div style={{fontFamily:"monospace"}}>{fmtTime(l.duration)}</div>
-                    <div style={{fontSize:10,color:"#6b7a99"}}>{fmtHMS(l.duration)}</div>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                    <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#94a3b8",cursor:"pointer",fontSize:10}} onClick={()=>setEditingLog(l)}>編集</button>
-                    <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#f87171",cursor:"pointer",fontSize:10}} onClick={()=>setLogs(p=>p.filter(x=>x.id!==l.id))}>削除</button>
-                  </div>
-                </div>
-              );})}
-            </div>
-          );
-        })}
+        {view==="heatmap" ? <HeatmapView/> : <ListView/>}
       </div>
     );
   };
@@ -400,6 +563,36 @@ export default function App() {
       )}
       {/* オフライン表示 */}
       <OfflineBanner/>
+
+      {/* 自動停止バナー */}
+      {autoStopInfo&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:600,background:"#fb923c",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#fff"}}>⏱ タイマーが自動停止しました</div>
+            <div style={{fontSize:BASE_FONT-3,color:"rgba(255,255,255,0.85)"}}>2時間を超えたため停止。時間を確認・調整してください。</div>
+          </div>
+          <button
+            onClick={()=>{
+              const cat = categories.find(c=>c.id===(autoStopInfo.savedState?.catId||selectedCat))||categories[0];
+              setEditingLog({
+                id: Date.now(),
+                date: todayStr(),
+                label: cat.name,
+                catId: cat.id,
+                duration: autoStopInfo.duration,
+                mode: autoStopInfo.savedState?.mode||mode,
+                _isAutoStop: true,
+              });
+              setAutoStopInfo(null);
+              setTab("log");
+            }}
+            style={{background:"#fff",color:"#fb923c",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:800,cursor:"pointer",fontSize:BASE_FONT-2,flexShrink:0}}
+          >
+            時間を調整して記録
+          </button>
+          <button onClick={()=>setAutoStopInfo(null)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:"0 4px"}}>×</button>
+        </div>
+      )}
 
       {/* Full-screen timer when running and not on timer tab */}
       {running&&tab!=="timer"&&(
@@ -444,7 +637,16 @@ export default function App() {
       {showLongTerm&&<LongTermModal tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)}/>}
       {showWeeklyMgr&&<WeeklyTemplateManager templates={weeklyTemplates} onSave={saveWeeklyTemplates} onClose={()=>setShowWeeklyMgr(false)}/>}
       {showCatMgr&&<CatManagerModal categories={categories} onChange={c=>{setCategories(c);if(!c.find(x=>x.id===selectedCat))setSelectedCat(c[0]?.id);}} onClose={()=>setShowCatMgr(false)}/>}
-      {editingLog&&<EditLogModal log={editingLog} categories={categories} onSave={u=>{setLogs(p=>p.map(l=>l.id===u.id?u:l));setEditingLog(null);}} onClose={()=>setEditingLog(null)}/>}
+      {editingLog&&<EditLogModal log={editingLog} categories={categories} onSave={u=>{
+        if(u._isAutoStop){
+          // 新規記録として追加
+          const {_isAutoStop,...clean}=u;
+          setLogs(p=>[{...clean,id:Date.now()},...p]);
+        } else {
+          setLogs(p=>p.map(l=>l.id===u.id?u:l));
+        }
+        setEditingLog(null);
+      }} onClose={()=>setEditingLog(null)}/>}
       {diaryModal&&<DiaryModal date={diaryModal} diary={diaries[diaryModal]} onSave={t=>saveDiary(diaryModal,t)} onClose={()=>setDiaryModal(null)}/>}
       {showDiaryList&&<DiaryListModal diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)}/>}
       {movePopup&&<MoveTaskPopup task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)}/>}
