@@ -407,13 +407,13 @@ export default function App() {
       .reduce((s,[,v])=>s+v, 0);
 
     const getColor = (sec) => {
-      if(!sec) return "#1e2330";
-      const h = sec/3600;
-      if(h < 0.5) return "#0d2137";
-      if(h < 2)   return "#1a4a7a";
-      if(h < 4)   return "#2563a8";
-      if(h < 6)   return "#3b82d4";
-      return "#4f9eff";
+      if(!sec)       return "#1e2330";  // 0分
+      const m = sec/60;
+      if(m < 20)     return "#0d2137";  // 〜20分
+      if(m < 40)     return "#1a4a7a";  // 〜40分
+      if(m < 60)     return "#2563a8";  // 〜60分
+      if(m < 90)     return "#3b82d4";  // 〜90分
+      return "#4f9eff";                 // 120分以上
     };
 
     const jan1 = new Date(year, 0, 1);
@@ -438,89 +438,10 @@ export default function App() {
 
     return (
       <div>
-        {/* ── Heatmap（常時表示） ── */}
-        <div style={{...S.card,background:"#161920",marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div>
-              <div style={{fontSize:11,color:"#6b7a99"}}>📊 {year}年 年間{categories.find(c=>c.id===studyCatId)?.name||"勉強"}時間</div>
-              <div style={{fontSize:28,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHM(yearTotal)||"0m"}</div>
-              <div style={{fontSize:11,color:"#6b7a99"}}>{fmtHMS(yearTotal)}</div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"#6b7a99"}}>記録日数</div>
-              <div style={{fontSize:22,fontWeight:800,color:"#34d399"}}>{Object.keys(dateMap).filter(d=>d.startsWith(String(year))).length}<span style={{fontSize:13}}>日</span></div>
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginBottom:8}}>
-            <span style={{fontSize:10,color:"#6b7a99"}}>少</span>
-            {["#1e2330","#0d2137","#1a4a7a","#2563a8","#3b82d4","#4f9eff"].map(c=>(
-              <div key={c} style={{width:CELL,height:CELL,borderRadius:3,background:c}}/>
-            ))}
-            <span style={{fontSize:10,color:"#6b7a99"}}>多</span>
-          </div>
-          {/* Heatmap grid */}
-          <div style={{overflowX:"auto",paddingBottom:4}}>
-            <div style={{display:"flex",gap:0}}>
-              <div style={{display:"flex",flexDirection:"column",gap:GAP,marginRight:4,paddingTop:18}}>
-                {DAY_LABELS.map((d,i)=>(
-                  <div key={i} style={{height:CELL,fontSize:9,color:"#3d4560",display:"flex",alignItems:"center"}}>{i%2===0?d:""}</div>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:GAP}}>
-                {weeks.map((week,wi)=>(
-                  <div key={wi} style={{display:"flex",flexDirection:"column",gap:GAP}}>
-                    <div style={{height:14,fontSize:9,color:"#6b7a99",whiteSpace:"nowrap"}}>
-                      {week[0].getDate()<=7&&week[0].getFullYear()===year?MONTH_LABELS[week[0].getMonth()]:""}
-                    </div>
-                    {week.map((day,di)=>{
-                      const ds=fmt(day), sec=dateMap[ds]||0;
-                      const isThisYear=day.getFullYear()===year;
-                      const isToday=ds===todayStr();
-                      return (
-                        <div key={di}
-                          onClick={()=>{ if(!sec||!isThisYear) return; setTooltip(t=>t?.date===ds?null:{date:ds,sec}); }}
-                          style={{width:CELL,height:CELL,borderRadius:3,background:isThisYear?getColor(sec):"transparent",border:isToday?"1.5px solid #4f9eff":"1.5px solid transparent",cursor:sec&&isThisYear?"pointer":"default",flexShrink:0}}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Tooltip */}
-          {tooltip&&(
-            <div style={{marginTop:8,background:"#0d0f14",borderRadius:8,padding:"8px 12px",border:"1px solid #4f9eff"}}>
-              <div style={{fontSize:12,color:"#4f9eff",fontWeight:700}}>{tooltip.date}</div>
-              <div style={{fontSize:16,fontWeight:800,color:"#e8ecf4"}}>{fmtHMS(tooltip.sec)}</div>
-              {diaries[tooltip.date]?.trim()&&(
-                <button onClick={()=>setDiaryModal(tooltip.date)} style={{marginTop:4,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"3px 10px",color:"#fbbf24",fontSize:11,cursor:"pointer",fontWeight:700}}>📔 日記を見る</button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 設定 */}
-        <div style={{...S.card,marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
-            <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
-              {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
-            {editGoal
-              ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
-              :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
-            }
-          </div>
-        </div>
-
-        {/* 週間進捗 */}
+        {/* ① 今週の進捗 */}
         <WeeklyProgress weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} goalHours={goalHours} onSelectDay={setLogSelectedDay} selectedDay={logSelectedDay} studyCatId={studyCatId}/>
 
-        {/* 詳細記録トグル */}
+        {/* ② 詳細記録トグル */}
         <div style={{display:"flex",gap:8,marginBottom:12}}>
           <button onClick={()=>setShowList(v=>!v)} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1px solid ${showList?"#4f9eff":"#2a2f3d"}`,background:showList?"rgba(79,158,255,0.12)":"#1e2330",color:showList?"#4f9eff":"#6b7a99",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2}}>
             📋 詳細記録 {showList?"▲":"▼"}
@@ -532,7 +453,7 @@ export default function App() {
 
         {/* 詳細記録リスト */}
         {showList&&(
-          <div>
+          <div style={{marginBottom:16}}>
             {logs.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
             {dates.map(date=>{
               const dl=byDate[date], total=dl.reduce((s,l)=>s+l.duration,0);
@@ -571,6 +492,83 @@ export default function App() {
             })}
           </div>
         )}
+
+        {/* ③ 目標設定 */}
+        <div style={{...S.card,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
+            <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
+              {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
+            {editGoal
+              ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
+              :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
+            }
+          </div>
+        </div>
+
+        {/* ④ ヒートマップ（一番下） */}
+        <div style={{...S.card,background:"#161920",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div>
+              <div style={{fontSize:11,color:"#6b7a99"}}>📊 {year}年 年間{categories.find(c=>c.id===studyCatId)?.name||"勉強"}時間</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHM(yearTotal)||"0m"}</div>
+              <div style={{fontSize:11,color:"#6b7a99"}}>{fmtHMS(yearTotal)}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:11,color:"#6b7a99"}}>記録日数</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#34d399"}}>{Object.keys(dateMap).filter(d=>d.startsWith(String(year))).length}<span style={{fontSize:13}}>日</span></div>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginBottom:8}}>
+            <span style={{fontSize:10,color:"#6b7a99"}}>少</span>
+            {["#1e2330","#0d2137","#1a4a7a","#2563a8","#3b82d4","#4f9eff"].map(c=>(
+              <div key={c} style={{width:CELL,height:CELL,borderRadius:3,background:c}}/>
+            ))}
+            <span style={{fontSize:10,color:"#6b7a99"}}>多</span>
+          </div>
+          <div style={{overflowX:"auto",paddingBottom:4}}>
+            <div style={{display:"flex",gap:0}}>
+              <div style={{display:"flex",flexDirection:"column",gap:GAP,marginRight:4,paddingTop:18}}>
+                {DAY_LABELS.map((d,i)=>(
+                  <div key={i} style={{height:CELL,fontSize:9,color:"#3d4560",display:"flex",alignItems:"center"}}>{i%2===0?d:""}</div>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:GAP}}>
+                {weeks.map((week,wi)=>(
+                  <div key={wi} style={{display:"flex",flexDirection:"column",gap:GAP}}>
+                    <div style={{height:14,fontSize:9,color:"#6b7a99",whiteSpace:"nowrap"}}>
+                      {week[0].getDate()<=7&&week[0].getFullYear()===year?MONTH_LABELS[week[0].getMonth()]:""}
+                    </div>
+                    {week.map((day,di)=>{
+                      const ds=fmt(day), sec=dateMap[ds]||0;
+                      const isThisYear=day.getFullYear()===year;
+                      const isToday=ds===todayStr();
+                      return (
+                        <div key={di}
+                          onClick={()=>{ if(!isThisYear) return; setTooltip(t=>t?.date===ds?null:{date:ds,sec}); }}
+                          style={{width:CELL,height:CELL,borderRadius:3,background:isThisYear?getColor(sec):"transparent",border:isToday?"1.5px solid #4f9eff":"1.5px solid transparent",cursor:isThisYear?"pointer":"default",flexShrink:0}}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {tooltip&&(
+            <div style={{marginTop:8,background:"#0d0f14",borderRadius:8,padding:"8px 12px",border:"1px solid #4f9eff"}}>
+              <div style={{fontSize:12,color:"#4f9eff",fontWeight:700}}>{tooltip.date}</div>
+              <div style={{fontSize:16,fontWeight:800,color:"#e8ecf4"}}>{tooltip.sec?fmtHMS(tooltip.sec):"記録なし"}</div>
+              {diaries[tooltip.date]?.trim()&&(
+                <button onClick={()=>setDiaryModal(tooltip.date)} style={{marginTop:4,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"3px 10px",color:"#fbbf24",fontSize:11,cursor:"pointer",fontWeight:700}}>📔 日記を見る</button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
