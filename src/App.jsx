@@ -1,22 +1,3 @@
-
-// ─── Offline Banner ──────────────────────────────────────────────────────────
-function OfflineBanner() {
-  const [offline, setOffline] = useState(!navigator.onLine);
-  useEffect(()=>{
-    const on  = () => setOffline(false);
-    const off = () => setOffline(true);
-    window.addEventListener('online',  on);
-    window.addEventListener('offline', off);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
-  },[]);
-  if(!offline) return null;
-  return (
-    <div style={{position:'fixed',top:0,left:0,right:0,zIndex:1000,background:'#fb923c',color:'#fff',textAlign:'center',padding:'8px',fontSize:13,fontWeight:700}}>
-      📡 オフライン中 — データはローカルに保存されています
-    </div>
-  );
-}
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   DEFAULT_CATS, DAYS_LABEL, WEEKLY_DEFAULTS, BASE_FONT,
@@ -40,6 +21,24 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
+
+// ─── Offline Banner ───────────────────────────────────────────────────────────
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine);
+  useEffect(()=>{
+    const on  = () => setOffline(false);
+    const off = () => setOffline(true);
+    window.addEventListener('online',  on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  },[]);
+  if(!offline) return null;
+  return (
+    <div style={{position:'fixed',top:0,left:0,right:0,zIndex:1000,background:'#fb923c',color:'#fff',textAlign:'center',padding:'8px',fontSize:13,fontWeight:700}}>
+      📡 オフライン中 — データはローカルに保存されています
+    </div>
+  );
+}
 
 export default function App() {
   const [tab,          setTab]          = useState("task");
