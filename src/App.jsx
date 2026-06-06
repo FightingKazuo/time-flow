@@ -575,8 +575,6 @@ export default function App() {
     );
   };
 
-  };
-
   return (
     <div style={S.app}>
       {/* ── Splash Screen ── */}
