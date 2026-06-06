@@ -107,6 +107,26 @@ export default function App() {
 
   const catColor=categories.find(c=>c.id===selectedCat)?.color||"#4f9eff";
   const todayTotal=logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
+  const todayStudyTotal=logs.filter(l=>l.date===todayStr()&&l.catId===studyCatId).reduce((s,l)=>s+l.duration,0);
+
+  // 日次目標（時間）= 週間目標 ÷ 5（平日）
+  const dailyGoalSec = Math.round(goalHours * 3600 / 5);
+
+  const saveWeeklyTemplates = (tpls) => {
+    setWeeklyTemplates(tpls);
+    LS.set("tf_weeklyTpls", tpls);
+    setWeeklyTasks(prev => {
+      const next = buildWeeklyTasks(tpls);
+      DAYS_LABEL.forEach((_,i)=>{
+        next[i] = next[i].map(t=>{
+          const old=(prev[i]||[]).find(o=>o.id===t.id);
+          return old?{...t,done:old.done}:t;
+        });
+      });
+      return next;
+    });
+    setShowWeeklyMgr(false);
+  };
 
   const toggleTask=(dayIdx,id,weekly)=>{
     if(weekly) {
@@ -267,8 +287,16 @@ export default function App() {
       </div>
     );
   };
-  const TimerTab=()=>(
-    <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:400,margin:"0 auto"}}>
+  const TimerTab=()=>{
+    const goalPct = dailyGoalSec > 0 ? Math.min(todayStudyTotal / dailyGoalSec, 1) : 0;
+    const goalReachedToday = todayStudyTotal >= dailyGoalSec;
+    const r2 = 104, circ2 = 2*Math.PI*r2;
+    const dash2 = circ2*(1-goalPct);
+    const ringColor = goalReachedToday ? "#fbbf24" : goalPct > 0.5 ? "#34d399" : "#4f9eff";
+    const studyCatName = categories.find(c=>c.id===studyCatId)?.name||"勉強";
+
+    return (
+    <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:440,margin:"0 auto"}}>
       {!running&&(
         <>
           <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
@@ -285,10 +313,60 @@ export default function App() {
           )}
         </>
       )}
-      {running&&<div style={{fontSize:11,color:"#6b7a99",marginBottom:6,letterSpacing:2,textTransform:"uppercase"}}>計測中</div>}
-      <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
-        <RingTimer elapsed={elapsed} total={mode==="pomodoro"?pomoDuration*60:0} running={running} color={catColor}/>
-      </div>
+
+      {/* 今日の目標リング（タイマーモードのみ） */}
+      {mode==="timer"&&(
+        <div style={{position:"relative",width:256,height:256,margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {/* 外周: 今日の目標リング */}
+          <svg width="256" height="256" viewBox="0 0 256 256" style={{position:"absolute",top:0,left:0}}>
+            <defs>
+              <filter id="glow2"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            {/* track */}
+            <circle cx="128" cy="128" r={r2} fill="none" stroke="#1e2330" strokeWidth="10"/>
+            {/* progress */}
+            {goalPct > 0 && (
+              <circle cx="128" cy="128" r={r2} fill="none" stroke={ringColor} strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={circ2}
+                strokeDashoffset={dash2}
+                transform="rotate(-90 128 128)"
+                filter="url(#glow2)"
+                style={{transition:"stroke-dashoffset 0.8s, stroke 0.5s"}}
+              />
+            )}
+            {/* 達成時: ✓マーク */}
+            {goalReachedToday&&(
+              <text x="128" y="30" textAnchor="middle" fill="#fbbf24" fontSize="18">🎯</text>
+            )}
+          </svg>
+          {/* 内側: セッションタイマー */}
+          <div style={{position:"relative",zIndex:1}}>
+            <RingTimer elapsed={elapsed} total={0} running={running} color={catColor}/>
+          </div>
+        </div>
+      )}
+
+      {/* ポモドーロはそのまま */}
+      {mode==="pomodoro"&&(
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+          <RingTimer elapsed={elapsed} total={pomoDuration*60} running={running} color={catColor}/>
+        </div>
+      )}
+
+      {/* 今日の合計（タイマーモードのみ） */}
+      {mode==="timer"&&(
+        <div style={{textAlign:"center",marginBottom:10}}>
+          {goalReachedToday&&<div style={{fontSize:BASE_FONT-1,color:"#fbbf24",fontWeight:800,marginBottom:4}}>🎯 今日の目標達成！</div>}
+          <div style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>今日の{studyCatName}時間</div>
+          <div style={{fontSize:22,fontWeight:900,color:ringColor,fontFamily:"monospace"}}>{fmtHMS(todayStudyTotal)||"0秒"}</div>
+          <div style={{fontSize:BASE_FONT-3,color:"#3d4560"}}>
+            目標 {fmtHM(dailyGoalSec)}
+            {!goalReachedToday&&dailyGoalSec>0&&<span style={{marginLeft:6}}>あと {fmtHM(Math.max(dailyGoalSec-todayStudyTotal,0))}</span>}
+          </div>
+        </div>
+      )}
+
       {pomoDone&&<div style={{background:"rgba(52,211,153,0.12)",border:"1px solid #34d399",borderRadius:10,padding:10,textAlign:"center",marginBottom:12,fontSize:BASE_FONT,color:"#34d399",fontWeight:700}}>🎉 {pomoDuration}分完了！計測は継続中</div>}
       {running&&(
         <div style={{textAlign:"center",marginBottom:14}}>
@@ -307,7 +385,8 @@ export default function App() {
       </div>
       {!running&&elapsed>0&&<div style={{textAlign:"center",marginTop:12,color:"#6b7a99",fontSize:BASE_FONT-1}}>経過: <span style={{color:"#e8ecf4",fontWeight:700,fontFamily:"monospace"}}>{fmtTime(elapsed)}</span> ({fmtHMS(elapsed)})</div>}
     </div>
-  );
+    );
+  };
 
   // ── Log Tab ───────────────────────────────────────────────────────────────
   const LogTab=()=>{
