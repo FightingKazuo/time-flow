@@ -287,12 +287,9 @@ export default function App() {
     );
   };
   const TimerTab=()=>{
-    const goalPct = dailyGoalSec > 0 ? Math.min(todayStudyTotal / dailyGoalSec, 1) : 0;
-    const goalReachedToday = todayStudyTotal >= dailyGoalSec;
-    const r2 = 104, circ2 = 2*Math.PI*r2;
-    const dash2 = circ2*(1-goalPct);
-    const ringColor = goalReachedToday ? "#fbbf24" : goalPct > 0.5 ? "#34d399" : "#4f9eff";
     const studyCatName = categories.find(c=>c.id===studyCatId)?.name||"勉強";
+    const sessionPct = Math.min(elapsed / (2*3600), 1); // 2時間をMAXに
+    const sessionColor = elapsed >= 3600 ? "#fb923c" : catColor; // 1時間超でオレンジ
 
     return (
     <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:440,margin:"0 auto"}}>
@@ -313,42 +310,16 @@ export default function App() {
         </>
       )}
 
-      {/* 今日の目標リング（タイマーモードのみ） */}
+      {/* タイマーモード：セッションリングのみ（外周リングなし） */}
       {mode==="timer"&&(
-        <div style={{position:"relative",width:256,height:256,margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          {/* 外周: 今日の目標リング */}
-          <svg width="256" height="256" viewBox="0 0 256 256" style={{position:"absolute",top:0,left:0}}>
-            <defs>
-              <filter id="glow2"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            </defs>
-            {/* track */}
-            <circle cx="128" cy="128" r={r2} fill="none" stroke="#1e2330" strokeWidth="10"/>
-            {/* progress */}
-            {goalPct > 0 && (
-              <circle cx="128" cy="128" r={r2} fill="none" stroke={ringColor} strokeWidth="10"
-                strokeLinecap="round"
-                strokeDasharray={circ2}
-                strokeDashoffset={dash2}
-                transform="rotate(-90 128 128)"
-                filter="url(#glow2)"
-                style={{transition:"stroke-dashoffset 0.8s, stroke 0.5s"}}
-              />
-            )}
-            {/* 達成時: ✓マーク */}
-            {goalReachedToday&&(
-              <text x="128" y="30" textAnchor="middle" fill="#fbbf24" fontSize="18">🎯</text>
-            )}
-          </svg>
-          {/* 内側: セッションタイマー */}
-          <div style={{position:"relative",zIndex:1}}>
-            <RingTimer elapsed={elapsed} total={0} running={running} color={catColor}/>
-          </div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+          <RingTimer elapsed={elapsed} total={0} running={running} color={sessionColor}/>
         </div>
       )}
 
-      {/* ポモドーロはそのまま */}
+      {/* ポモドーロ */}
       {mode==="pomodoro"&&(
-        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
           <RingTimer elapsed={elapsed} total={pomoDuration*60} running={running} color={catColor}/>
         </div>
       )}
@@ -356,12 +327,11 @@ export default function App() {
       {/* 今日の合計（タイマーモードのみ） */}
       {mode==="timer"&&(
         <div style={{textAlign:"center",marginBottom:10}}>
-          {goalReachedToday&&<div style={{fontSize:BASE_FONT-1,color:"#fbbf24",fontWeight:800,marginBottom:4}}>🎯 今日の目標達成！</div>}
-          <div style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>今日の{studyCatName}時間</div>
-          <div style={{fontSize:22,fontWeight:900,color:ringColor,fontFamily:"monospace"}}>{fmtHMS(todayStudyTotal)||"0秒"}</div>
-          <div style={{fontSize:BASE_FONT-3,color:"#3d4560"}}>
-            目標 {fmtHM(dailyGoalSec)}
-            {!goalReachedToday&&dailyGoalSec>0&&<span style={{marginLeft:6}}>あと {fmtHM(Math.max(dailyGoalSec-todayStudyTotal,0))}</span>}
+          <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:2}}>今日の{studyCatName}時間</div>
+          <div style={{fontSize:20,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHMS(todayStudyTotal)||"0秒"}</div>
+          <div style={{fontSize:BASE_FONT-3,color:"#3d4560",marginTop:2}}>
+            1セッション最大 2時間
+            {running&&<span style={{marginLeft:8,color:elapsed>=3600?"#fb923c":"#6b7a99"}}>残り {fmtHM(Math.max(2*3600-elapsed,0))}</span>}
           </div>
         </div>
       )}
@@ -370,7 +340,6 @@ export default function App() {
       {running&&(
         <div style={{textAlign:"center",marginBottom:14}}>
           <div style={{fontSize:BASE_FONT-1,color:"#6b7a99"}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
-          <div style={{fontSize:BASE_FONT-1,color:"#6b7a99",marginTop:4}}>{fmtHMS(elapsed)}</div>
         </div>
       )}
       <div style={{display:"flex",justifyContent:"center",gap:10}}>
@@ -609,13 +578,16 @@ export default function App() {
           <button
             onClick={()=>{
               const cat = categories.find(c=>c.id===(autoStopInfo.savedState?.catId||selectedCat))||categories[0];
+              const date = autoStopInfo.savedState?.date || todayStr();
+              const startHour = autoStopInfo.savedState?.startHour || null;
               setEditingLog({
                 id: Date.now(),
-                date: todayStr(),
+                date,
                 label: cat.name,
                 catId: cat.id,
                 duration: autoStopInfo.duration,
                 mode: autoStopInfo.savedState?.mode||mode,
+                startHour,
                 _isAutoStop: true,
               });
               setAutoStopInfo(null);
