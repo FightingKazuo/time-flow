@@ -288,8 +288,6 @@ export default function App() {
   };
   const TimerTab=()=>{
     const studyCatName = categories.find(c=>c.id===studyCatId)?.name||"勉強";
-    const sessionPct = Math.min(elapsed / (2*3600), 1); // 2時間をMAXに
-    const sessionColor = elapsed >= 3600 ? "#fb923c" : catColor; // 1時間超でオレンジ
 
     return (
     <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:440,margin:"0 auto"}}>
@@ -313,7 +311,7 @@ export default function App() {
       {/* タイマーモード：セッションリングのみ（外周リングなし） */}
       {mode==="timer"&&(
         <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
-          <RingTimer elapsed={elapsed} total={0} running={running} color={sessionColor}/>
+          <RingTimer elapsed={elapsed} total={0} running={running} color={catColor}/>
         </div>
       )}
 
@@ -620,7 +618,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.1.0</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.1.1</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
