@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { notify, todayStr, LS } from "../constants";
+import { notify, todayStr, LS, pad } from "../constants";
 
 const AUTO_STOP_SEC = 2 * 3600; // 2時間
 const LS_START_KEY  = "tf_timer_start";   // { wallStart, base, sessionStart, mode, catId }
@@ -99,9 +99,27 @@ export function useTimer({ categories, selectedCat, mode, pomoDuration, onAutoSt
     setRunning(false);
     releaseWakeLock();
     LS.set(LS_START_KEY, null);
-    if(onAutoStop) onAutoStop({ duration: total, savedState: { catId: selectedCat, mode, sessionStart: sessionStartRef.current?.toISOString() } });
-    setElapsed(total);
-    baseElapsedRef.current  = total;
+
+    // 自動停止時も開始日付・最大2時間で保存
+    const sessionStart = sessionStartRef.current;
+    const cappedTotal = Math.min(total, AUTO_STOP_SEC);
+    const startDate = sessionStart ? sessionStart : new Date();
+    const dateStr = `${startDate.getFullYear()}/${pad(startDate.getMonth()+1)}/${pad(startDate.getDate())}`;
+    const startHour = sessionStart
+      ? sessionStart.getHours() + sessionStart.getMinutes() / 60
+      : null;
+
+    if(onAutoStop) onAutoStop({
+      duration: cappedTotal,
+      savedState: {
+        catId: selectedCat, mode,
+        sessionStart: sessionStart?.toISOString(),
+        date: dateStr,
+        startHour,
+      }
+    });
+    setElapsed(cappedTotal);
+    baseElapsedRef.current = cappedTotal;
   }, [onAutoStop, selectedCat, mode, releaseWakeLock]);
 
   useEffect(() => {
@@ -143,17 +161,36 @@ export function useTimer({ categories, selectedCat, mode, pomoDuration, onAutoSt
 
   const stop = (onSave) => {
     setRunning(false);
-    const total = Math.max(
-      baseElapsedRef.current,
-      sessionStartRef.current ? Math.floor((Date.now() - sessionStartRef.current.getTime()) / 1000) : 0
-    );
+
+    const sessionStart = sessionStartRef.current;
+
+    // 実際の経過時間（wall-clock）、ただし2時間キャップ
+    const wallElapsed = sessionStart
+      ? Math.floor((Date.now() - sessionStart.getTime()) / 1000)
+      : baseElapsedRef.current;
+    const total = Math.min(wallElapsed, AUTO_STOP_SEC);
+
     if(total >= 5) {
       const cat = categories.find(c => c.id === selectedCat) || categories[0];
-      const startHour = sessionStartRef.current
-        ? sessionStartRef.current.getHours() + sessionStartRef.current.getMinutes() / 60
+
+      // 日付は開始時刻の日付を使用（日をまたいでも開始日に記録）
+      const startDate = sessionStart ? sessionStart : new Date();
+      const dateStr = `${startDate.getFullYear()}/${pad(startDate.getMonth()+1)}/${pad(startDate.getDate())}`;
+      const startHour = sessionStart
+        ? sessionStart.getHours() + sessionStart.getMinutes() / 60
         : null;
-      onSave({ id: Date.now(), date: todayStr(), label: cat.name, catId: cat.id, duration: total, mode, startHour });
+
+      onSave({
+        id: Date.now(),
+        date: dateStr,          // ← 開始日付
+        label: cat.name,
+        catId: cat.id,
+        duration: total,        // ← 最大2時間
+        mode,
+        startHour,
+      });
     }
+
     setElapsed(0);
     baseElapsedRef.current  = 0;
     startTimeRef.current    = null;
