@@ -618,7 +618,10 @@ export default function App() {
 
       <div style={S.header}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div><div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div><div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理</div></div>
+          <div>
+            <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.1.0</span></div>
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
@@ -664,7 +667,7 @@ export default function App() {
           longTermTasks, logs, diaries,
           goalHours, weekHistory,
           exportedAt: new Date().toISOString(),
-          appVersion: "v16",
+          appVersion: "v2.1.0",
         }}
         onRestore={p=>{
           if(p.categories)      setCategories(p.categories);
