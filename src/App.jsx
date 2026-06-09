@@ -21,6 +21,7 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal   from "./components/modals/MonthlyTaskModal";
 import CalendarEventModal from "./components/modals/CalendarEventModal";
+import GoogleCalendarModal from "./components/modals/GoogleCalendarModal";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
 
@@ -57,6 +58,7 @@ export default function App() {
   const [showMonthly,   setShowMonthly]   = useState(false);
   const [calendarEvents,setCalendarEvents]= useState(()=>LS.get("tf_calEvents", []));
   const [showCalendar,  setShowCalendar]  = useState(false);
+  const [showGoogleCal, setShowGoogleCal] = useState(false);
   const [splash,        setSplash]        = useState(true);
   useEffect(()=>{ const t=setTimeout(()=>setSplash(false), 2000); return ()=>clearTimeout(t); }, []);
   const [weekHistory,   setWeekHistory]   = useState(()=>LS.get("tf_weekHistory", []));
@@ -308,8 +310,8 @@ export default function App() {
           <button onClick={()=>setShowMonthly(true)} style={{flex:1,background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,padding:"10px 0",color:"#a78bfa",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
             🗓 マンスリータスク
           </button>
-          <button onClick={()=>setShowCalendar(true)} style={{flex:1,background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"10px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
-            📅 カレンダー予定
+          <button onClick={()=>setShowGoogleCal(true)} style={{flex:1,background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.2)",borderRadius:10,padding:"10px 0",color:"#4285f4",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
+            📅 Googleカレンダー
           </button>
         </div>
 
@@ -677,7 +679,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.2.0</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.3.0</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -701,6 +703,7 @@ export default function App() {
       </div>
 
       {showMonthly&&<MonthlyTaskModal tasks={monthlyTasks} onSave={t=>{setMonthlyTasks(t);setShowMonthly(false);}} onClose={()=>setShowMonthly(false)}/>}
+      {showGoogleCal&&<GoogleCalendarModal onImport={evts=>setCalendarEvents(p=>[...p,...evts])} onClose={()=>setShowGoogleCal(false)}/>}
       {showCalendar&&<CalendarEventModal events={calendarEvents} onSave={e=>{setCalendarEvents(e);setShowCalendar(false);}} onClose={()=>setShowCalendar(false)}/>}
       {showWeekHistory&&<WeekHistoryModal history={weekHistory} onClose={()=>setShowWeekHistory(false)}/>}
       {showLongTerm&&<LongTermModal tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)}/>}
