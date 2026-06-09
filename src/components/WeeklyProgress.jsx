@@ -9,8 +9,9 @@ export default function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries
   const timePct=goalHours>0?Math.min(Math.round(studyWeekTotal/goalHours/3600*100),100):0;
   const goalReached=studyWeekTotal>=goalHours*3600;
   const todayTotal=logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
+  const getDiaryText = d => typeof d==="object" ? d?.text : d;
   const mon=getWeekMonday(); let diaryCount=0;
-  for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(d.getDate()+i); if(diaries[fmtDate(d)]?.trim()) diaryCount++; }
+  for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(d.getDate()+i); if(getDiaryText(diaries[fmtDate(d)])?.trim()) diaryCount++; }
   const diaryPct=Math.round(diaryCount/7*100);
   const selDate=fmtDate(getDayDate(selectedDay));
   const selLogs=logs.filter(l=>l.date===selDate);
@@ -68,7 +69,7 @@ export default function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries
       <div style={{background:"#161920",borderRadius:8,padding:10,border:"1px solid #2a2f3d"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <span style={{fontSize:BASE_FONT-2,fontWeight:700,color:"#4f9eff"}}>{DAYS_LABEL[selectedDay]} {dayDateStr(selectedDay)} の進捗</span>
-          {diaries[selDate]?.trim()
+          {getDiaryText(diaries[selDate])?.trim()
             ?<span style={{fontSize:BASE_FONT-4,color:"#fbbf24",fontWeight:700,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf2466",borderRadius:6,padding:"2px 8px"}}>📔 日記あり</span>
             :<span style={{fontSize:BASE_FONT-4,color:"#3d4560",background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:6,padding:"2px 8px"}}>日記なし</span>
           }
