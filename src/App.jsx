@@ -194,11 +194,13 @@ export default function App() {
     setCustomTasks(p=>({...p,[toDay]:[...p[toDay],{...task,id:Date.now(),weekly:false}]}));
     setMovePopup(null);
   };
-  // Googleカレンダー自動同期（起動時）
+  // Googleカレンダー自動同期（起動時・エラーは無視）
   useEffect(()=>{
-    autoSyncGoogleCalendar(calendarEvents, newItems => {
-      setCalendarEvents(prev => [...prev, ...newItems]);
-    });
+    try {
+      autoSyncGoogleCalendar(calendarEvents, newItems => {
+        setCalendarEvents(prev => [...prev, ...newItems]);
+      });
+    } catch(e) { /* サイレント失敗 */ }
   }, []);
 
   // 日記のテキスト取得ヘルパー（旧形式の文字列にも対応）
