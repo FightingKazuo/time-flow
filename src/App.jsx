@@ -21,7 +21,7 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal   from "./components/modals/MonthlyTaskModal";
 import CalendarEventModal from "./components/modals/CalendarEventModal";
-import GoogleCalendarModal, { autoSyncGoogleCalendar } from "./components/modals/GoogleCalendarModal";
+import GoogleCalendarModal from "./components/modals/GoogleCalendarModal";
 import { DIARY_COLORS } from "./components/modals/DiaryModal";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
@@ -194,15 +194,6 @@ export default function App() {
     setCustomTasks(p=>({...p,[toDay]:[...p[toDay],{...task,id:Date.now(),weekly:false}]}));
     setMovePopup(null);
   };
-  // Googleカレンダー自動同期（起動時・エラーは無視）
-  useEffect(()=>{
-    try {
-      autoSyncGoogleCalendar(calendarEvents, newItems => {
-        setCalendarEvents(prev => [...prev, ...newItems]);
-      });
-    } catch(e) { /* サイレント失敗 */ }
-  }, []);
-
   // 日記のテキスト取得ヘルパー（旧形式の文字列にも対応）
   const getDiaryText  = d => typeof d==="object" ? d?.text  : d;
   const getDiaryColor = d => typeof d==="object" ? (d?.color||"none") : "none";
@@ -704,7 +695,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.4.1</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.4.2</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
