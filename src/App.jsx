@@ -21,7 +21,8 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal   from "./components/modals/MonthlyTaskModal";
 import CalendarEventModal from "./components/modals/CalendarEventModal";
-import GoogleCalendarModal from "./components/modals/GoogleCalendarModal";
+import GoogleCalendarModal, { autoSyncGoogleCalendar } from "./components/modals/GoogleCalendarModal";
+import { DIARY_COLORS } from "./components/modals/DiaryModal";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
 
@@ -193,7 +194,17 @@ export default function App() {
     setCustomTasks(p=>({...p,[toDay]:[...p[toDay],{...task,id:Date.now(),weekly:false}]}));
     setMovePopup(null);
   };
-  const saveDiary=(date,text)=>setDiaries(p=>({...p,[date]:text}));
+  // Googleカレンダー自動同期（起動時）
+  useEffect(()=>{
+    autoSyncGoogleCalendar(calendarEvents, newItems => {
+      setCalendarEvents(prev => [...prev, ...newItems]);
+    });
+  }, []);
+
+  // 日記のテキスト取得ヘルパー（旧形式の文字列にも対応）
+  const getDiaryText  = d => typeof d==="object" ? d?.text  : d;
+  const getDiaryColor = d => typeof d==="object" ? (d?.color||"none") : "none";
+  const saveDiary = (date, value) => setDiaries(p=>({...p,[date]:value}));
   const reorderCategories=(newOrder)=>setCategories(newOrder);
 
   const S={
@@ -241,7 +252,7 @@ export default function App() {
           {DAYS_LABEL.map((day,i)=>{
             const wt=weeklyTasks[i]||[], ct=customTasks[i]||[], all=[...wt,...ct];
             const done=all.filter(t=>t.done).length, isToday=i===todayDayIdx();
-            const dayDate=fmtDate(getDayDate(i)), hasDiary=diaries[dayDate]?.trim();
+            const dayDateStr2=fmtDate(getDayDate(i));
             return (
               <div key={i} style={{...S.card,padding:10,borderColor:isToday?catColor:"#2a2f3d",background:isToday?`rgba(${hexRgb(catColor)},0.06)`:"#1e2330"}}>
                 {/* Header */}
@@ -249,18 +260,23 @@ export default function App() {
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:"#94a3b8"}}>{day}</span>
                     <span style={{fontSize:10,color:"#3d4560"}}>{dayDateStr(i)}</span>
-                    {/* diary button */}
-                    <button onClick={()=>setDiaryModal(dayDate)} style={{
-                      background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",
-                      border:`1.5px solid ${hasDiary?"#fbbf24":"#3d4560"}`,
-                      borderRadius:8, padding:"3px 8px", cursor:"pointer",
-                      fontSize:11, fontWeight:800,
-                      color:hasDiary?"#fbbf24":"#6b7a99",
-                      lineHeight:"18px", letterSpacing:0.3,
-                      boxShadow:hasDiary?"0 0 6px rgba(251,191,36,0.3)":"none",
-                    }}>
-                      {hasDiary?"📔":"＋日記"}
-                    </button>
+                  {(()=>{
+                    const d = diaries[dayDateStr2];
+                    const hasDiary = getDiaryText(d)?.trim();
+                    const dc = DIARY_COLORS.find(c=>c.id===getDiaryColor(d));
+                    return (
+                      <button onClick={()=>setDiaryModal(dayDateStr2)} style={{
+                        background:hasDiary?`${dc?.color||"#fbbf24"}22`:"rgba(255,255,255,0.04)",
+                        border:`1.5px solid ${hasDiary?(dc?.color||"#fbbf24"):"#3d4560"}`,
+                        borderRadius:8,padding:"3px 8px",cursor:"pointer",
+                        fontSize:11,fontWeight:800,
+                        color:hasDiary?(dc?.color||"#fbbf24"):"#6b7a99",
+                        lineHeight:"18px",
+                      }}>
+                        {hasDiary?"📔":"＋日記"}
+                      </button>
+                    );
+                  })()}
                   </div>
                   {all.length>0&&<span style={{fontSize:9,fontWeight:700,color:done===all.length?"#34d399":"#6b7a99"}}>{done}/{all.length}</span>}
                 </div>
@@ -578,8 +594,15 @@ export default function App() {
                       return (
                         <div key={di}
                           onClick={()=>{ if(!isThisYear) return; setTooltip(t=>t?.date===ds?null:{date:ds,sec}); }}
-                          style={{width:CELL,height:CELL,borderRadius:3,background:isThisYear?getColor(sec):"transparent",border:isToday?"1.5px solid #4f9eff":"1.5px solid transparent",cursor:isThisYear?"pointer":"default",flexShrink:0}}
-                        />
+                          style={{position:"relative",width:CELL,height:CELL,borderRadius:3,background:isThisYear?getColor(sec):"transparent",border:isToday?"1.5px solid #4f9eff":"1.5px solid transparent",cursor:isThisYear?"pointer":"default",flexShrink:0}}>
+                          {(()=>{
+                            const d = diaries[ds.replace(/-/g,'/')];
+                            const dc = d ? DIARY_COLORS.find(c=>c.id===getDiaryColor(d)) : null;
+                            return dc && dc.id!=="none" ? (
+                              <div style={{position:"absolute",bottom:1,right:1,width:4,height:4,borderRadius:"50%",background:dc.color}}/>
+                            ) : null;
+                          })()}
+                        </div>
                       );
                     })}
                   </div>
@@ -679,7 +702,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.3.0</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.4.1</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -719,7 +742,7 @@ export default function App() {
         }
         setEditingLog(null);
       }} onClose={()=>setEditingLog(null)}/>}
-      {diaryModal&&<DiaryModal date={diaryModal} diary={diaries[diaryModal]} onSave={t=>saveDiary(diaryModal,t)} onClose={()=>setDiaryModal(null)}/>}
+      {diaryModal&&<DiaryModal date={diaryModal} diary={diaries[diaryModal]} onSave={val=>{ saveDiary(diaryModal, val); setDiaryModal(null); }} onClose={()=>setDiaryModal(null)}/>}
       {showDiaryList&&<DiaryListModal diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)}/>}
       {movePopup&&<MoveTaskPopup task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)}/>}
       {showBackup&&<BackupModal
