@@ -19,6 +19,8 @@ import WeekHistoryModal   from "./components/modals/WeekHistoryModal";
 import LongTermModal      from "./components/modals/LongTermModal";
 import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
+import MonthlyTaskModal   from "./components/modals/MonthlyTaskModal";
+import CalendarEventModal from "./components/modals/CalendarEventModal";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
 
@@ -51,6 +53,10 @@ export default function App() {
   const [weeklyTemplates,setWeeklyTemplates]=useState(()=>LS.get("tf_weeklyTpls", WEEKLY_DEFAULTS));
   const [longTermTasks, setLongTermTasks] = useState(()=>LS.get("tf_longTerm", []));
   const [showLongTerm,  setShowLongTerm]  = useState(false);
+  const [monthlyTasks,  setMonthlyTasks]  = useState(()=>LS.get("tf_monthlyTasks", []));
+  const [showMonthly,   setShowMonthly]   = useState(false);
+  const [calendarEvents,setCalendarEvents]= useState(()=>LS.get("tf_calEvents", []));
+  const [showCalendar,  setShowCalendar]  = useState(false);
   const [splash,        setSplash]        = useState(true);
   useEffect(()=>{ const t=setTimeout(()=>setSplash(false), 2000); return ()=>clearTimeout(t); }, []);
   const [weekHistory,   setWeekHistory]   = useState(()=>LS.get("tf_weekHistory", []));
@@ -91,7 +97,9 @@ export default function App() {
   useEffect(()=>LS.set("tf_customTasks", customTasks), [customTasks]);
   useEffect(()=>LS.set("tf_logs",        logs),        [logs]);
   useEffect(()=>LS.set("tf_diaries",     diaries),     [diaries]);
-  useEffect(()=>LS.set("tf_longTerm",    longTermTasks), [longTermTasks]);
+  useEffect(()=>LS.set("tf_longTerm",     longTermTasks),  [longTermTasks]);
+  useEffect(()=>LS.set("tf_monthlyTasks", monthlyTasks),   [monthlyTasks]);
+  useEffect(()=>LS.set("tf_calEvents",    calendarEvents), [calendarEvents]);
   useEffect(()=>LS.set("tf_studyCatId",  studyCatId),  [studyCatId]);
   useEffect(()=>LS.set("tf_weekHistory", weekHistory),  [weekHistory]);
 
@@ -126,6 +134,35 @@ export default function App() {
     });
     setShowWeeklyMgr(false);
   };
+
+  // マンスリータスク → 週タスクに自動注入
+  const injectMonthlyTasks = useCallback(() => {
+    const mon = getWeekMonday();
+    setCustomTasks(prev => {
+      const next = {...prev};
+      for(let i=0; i<7; i++){
+        const day = new Date(mon); day.setDate(day.getDate()+i);
+        const dayOfMonth = day.getDate();
+        const dayOfWeek  = day.getDay()===0?6:day.getDay()-1; // 0=月
+        const weekNum = Math.ceil(dayOfMonth/7);
+
+        monthlyTasks.forEach(t=>{
+          const id = `mt_${t.id}_${day.getFullYear()}_${day.getMonth()}_${dayOfMonth}`;
+          const already = (next[i]||[]).some(x=>x.id===id);
+          if(already) return;
+          const match = t.type==="weekday"
+            ? (t.weekNum===weekNum && t.weekDay===dayOfWeek)
+            : (t.monthDay===dayOfMonth);
+          if(match){
+            next[i] = [...(next[i]||[]), {id, label:t.label, done:false, fromMonthly:t.id, sticky:true}];
+          }
+        });
+      }
+      return next;
+    });
+  }, [monthlyTasks]);
+
+  useEffect(()=>{ injectMonthlyTasks(); }, [monthlyTasks, injectMonthlyTasks]);
 
   const toggleTask=(dayIdx,id,weekly)=>{
     if(weekly) {
@@ -226,6 +263,19 @@ export default function App() {
                   {all.length>0&&<span style={{fontSize:9,fontWeight:700,color:done===all.length?"#34d399":"#6b7a99"}}>{done}/{all.length}</span>}
                 </div>
                 {all.length===0&&<div style={{fontSize:10,color:"#3d4560",textAlign:"center",padding:"4px 0"}}>—</div>}
+                {/* カレンダー予定（上部・チェックなし） */}
+                {(()=>{
+                  const dayDate = getDayDate(i);
+                  const ds = `${dayDate.getFullYear()}-${pad(dayDate.getMonth()+1)}-${pad(dayDate.getDate())}`;
+                  const dayEvents = calendarEvents.filter(e=>e.date===ds);
+                  return dayEvents.map(e=>(
+                    <div key={e.id} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 6px",marginBottom:3,background:"rgba(79,158,255,0.07)",borderRadius:6,border:"1px solid rgba(79,158,255,0.18)"}}>
+                      <span style={{fontSize:10,flexShrink:0}}>📅</span>
+                      <span style={{fontSize:BASE_FONT-2,color:"#4f9eff",fontWeight:600,flex:1,lineHeight:1.3}}>{e.title}</span>
+                      {e.time&&<span style={{fontSize:9,color:"#6b7a99",flexShrink:0}}>⏰{e.time}</span>}
+                    </div>
+                  ));
+                })()}
                 {all.map(t=>(
                   <div key={t.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 0",borderBottom:"1px solid #2a2f3d",opacity:t.done?0.4:1}}>
                     <button onClick={()=>setMovePopup({task:t,fromDay:i})} style={{background:"none",border:"none",color:"#3d4560",fontSize:14,flexShrink:0,cursor:"pointer",padding:"1px 2px",lineHeight:1}} title="移動">⇄</button>
@@ -235,6 +285,7 @@ export default function App() {
                     <span style={{fontSize:BASE_FONT-1,flex:1,lineHeight:1.3}}>{t.label}</span>
                     {t.weekly&&<span style={{fontSize:9,background:"rgba(79,158,255,0.12)",color:"#4f9eff",borderRadius:4,padding:"1px 4px",flexShrink:0}}>毎週</span>}
                     {t.fromLongTerm&&<span style={{fontSize:9,background:"rgba(251,146,60,0.12)",color:"#fb923c",borderRadius:4,padding:"1px 4px",flexShrink:0}}>📌</span>}
+                    {t.fromMonthly&&<span style={{fontSize:9,background:"rgba(167,139,250,0.12)",color:"#a78bfa",borderRadius:4,padding:"1px 4px",flexShrink:0}}>🗓</span>}
                     {/* 削除ボタン */}
                     {!t.weekly&&<button onClick={()=>{
                       setCustomTasks(p=>({...p,[i]:p[i].filter(x=>x.id!==t.id)}));
@@ -253,6 +304,14 @@ export default function App() {
         <button onClick={()=>setShowWeeklyMgr(true)} style={{width:"100%",background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"12px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700,marginTop:4}}>
           ⚙ 毎週タスクを編集
         </button>
+        <div style={{display:"flex",gap:8,marginTop:8}}>
+          <button onClick={()=>setShowMonthly(true)} style={{flex:1,background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,padding:"10px 0",color:"#a78bfa",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
+            🗓 マンスリータスク
+          </button>
+          <button onClick={()=>setShowCalendar(true)} style={{flex:1,background:"rgba(79,158,255,0.06)",border:"1px solid rgba(79,158,255,0.2)",borderRadius:10,padding:"10px 0",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
+            📅 カレンダー予定
+          </button>
+        </div>
 
         {/* ── 長期タスク ── */}
         <div style={{marginTop:16,borderTop:"1px dashed #2a2f3d",paddingTop:14}}>
@@ -618,7 +677,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.1.1</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.2.0</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -641,6 +700,8 @@ export default function App() {
         {tab==="log"&&<LogTab/>}
       </div>
 
+      {showMonthly&&<MonthlyTaskModal tasks={monthlyTasks} onSave={t=>{setMonthlyTasks(t);setShowMonthly(false);}} onClose={()=>setShowMonthly(false)}/>}
+      {showCalendar&&<CalendarEventModal events={calendarEvents} onSave={e=>{setCalendarEvents(e);setShowCalendar(false);}} onClose={()=>setShowCalendar(false)}/>}
       {showWeekHistory&&<WeekHistoryModal history={weekHistory} onClose={()=>setShowWeekHistory(false)}/>}
       {showLongTerm&&<LongTermModal tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)}/>}
       {showWeeklyMgr&&<WeeklyTemplateManager templates={weeklyTemplates} onSave={saveWeeklyTemplates} onClose={()=>setShowWeeklyMgr(false)}/>}
@@ -662,7 +723,7 @@ export default function App() {
         data={{
           categories, selectedCat, studyCatId,
           weeklyTemplates, weeklyTasks, customTasks,
-          longTermTasks, logs, diaries,
+          longTermTasks, monthlyTasks, calendarEvents, logs, diaries,
           goalHours, weekHistory,
           exportedAt: new Date().toISOString(),
           appVersion: "v2.1.0",
@@ -675,6 +736,8 @@ export default function App() {
           if(p.weeklyTasks)     setWeeklyTasks(p.weeklyTasks);
           if(p.customTasks)     setCustomTasks(p.customTasks);
           if(p.longTermTasks)   setLongTermTasks(p.longTermTasks);
+          if(p.monthlyTasks)    setMonthlyTasks(p.monthlyTasks);
+          if(p.calendarEvents)  setCalendarEvents(p.calendarEvents);
           if(p.logs)            setLogs(p.logs);
           if(p.diaries)         setDiaries(p.diaries);
           if(p.goalHours)       setGoalHours(p.goalHours);
