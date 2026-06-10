@@ -754,7 +754,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.2</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.3</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -794,7 +794,6 @@ export default function App() {
         }
         setEditingLog(null);
       }} onClose={()=>setEditingLog(null)}/>}
-      {diaryModal&&<DiaryModal date={diaryModal} diary={diaries[diaryModal]} onSave={val=>{ saveDiary(diaryModal, val); setDiaryModal(null); }} onClose={()=>setDiaryModal(null)}/>}
       {showDiaryList&&<DiaryListModal diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)}/>}
       {movePopup&&<MoveTaskPopup task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)}/>}
       {showBackup&&<BackupModal
