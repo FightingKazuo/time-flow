@@ -225,7 +225,7 @@ export default function App() {
                     <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:"#94a3b8"}}>{day}</span>
                     <span style={{fontSize:10,color:"#3d4560"}}>{dayDateStr(i)}</span>
                     {/* diary button */}
-                    <button onClick={()=>{setTab("diary");}} style={{
+                    <button onClick={()=>setDiaryModal(dayDate)} style={{
                       background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",
                       border:`1.5px solid ${hasDiary?"#fbbf24":"#3d4560"}`,
                       borderRadius:8, padding:"3px 8px", cursor:"pointer",
@@ -387,122 +387,89 @@ export default function App() {
     );
   };
 
-  // ── Diary Tab ─────────────────────────────────────────────────────────────
-  const DiaryTab=()=>{
-    const [editDate, setEditDate] = useState(todayStr());
-    const [text,  setText]  = useState("");
-    const [color, setColor] = useState("none");
-    const [saved, setSaved]  = useState(false);
-    const [viewDate, setViewDate] = useState(null); // null=editor, date=viewer
+  // ── Diary Screen（全画面オーバーレイ） ────────────────────────────────────
+  const DiaryScreen=()=>{
+    const [editDate, setEditDate] = useState(diaryModal||todayStr());
+    const [text,  setText]  = useState(()=>{
+      const d=diaries[diaryModal||todayStr()];
+      return typeof d==="object"?d?.text||"":d||"";
+    });
+    const [color, setColor] = useState(()=>{
+      const d=diaries[diaryModal||todayStr()];
+      return typeof d==="object"?d?.color||"none":"none";
+    });
+    const [saved, setSaved] = useState(false);
+    const [listMode, setListMode] = useState(false);
 
-    // Load diary for selected date
-    useEffect(()=>{
-      const d = diaries[editDate];
-      setText(typeof d==="object" ? d?.text||"" : d||"");
-      setColor(typeof d==="object" ? d?.color||"none" : "none");
+    const loadDate = (date) => {
+      setEditDate(date);
+      const d=diaries[date];
+      setText(typeof d==="object"?d?.text||"":d||"");
+      setColor(typeof d==="object"?d?.color||"none":"none");
       setSaved(false);
-    }, [editDate]);
+      setListMode(false);
+    };
 
     const save = () => {
-      saveDiary(editDate, { text, color });
+      saveDiary(editDate, {text, color});
       setSaved(true);
       setTimeout(()=>setSaved(false), 2000);
     };
 
-    // 過去日記一覧
+    const selColor = DIARY_COLORS.find(c=>c.id===color)||DIARY_COLORS[0];
+
     const entries = Object.entries(diaries)
       .filter(([,d])=>(typeof d==="object"?d?.text:d)?.trim())
       .sort((a,b)=>b[0].localeCompare(a[0]));
 
-    const getDC = d => DIARY_COLORS.find(c=>c.id===(typeof d==="object"?d?.color||"none":"none"));
-
-    if(viewDate) {
-      const vd = diaries[viewDate];
-      const vText  = typeof vd==="object"?vd?.text||"":vd||"";
-      const vColor = DIARY_COLORS.find(c=>c.id===(typeof vd==="object"?vd?.color||"none":"none"));
-      return (
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <button onClick={()=>setViewDate(null)} style={{background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"6px 12px",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-1}}>← 戻る</button>
-            <div>
-              <div style={{fontSize:BASE_FONT+1,fontWeight:800,color:vColor?.color||"#fbbf24"}}>{viewDate}</div>
-              {vColor&&vColor.id!=="none"&&<div style={{fontSize:11,color:vColor.color}}>{vColor.label}</div>}
-            </div>
-            <button onClick={()=>{setEditDate(viewDate);setViewDate(null);setTab("diary");}} style={{marginLeft:"auto",background:"rgba(79,158,255,0.1)",border:"1px solid #4f9eff",borderRadius:8,padding:"6px 12px",color:"#4f9eff",cursor:"pointer",fontSize:BASE_FONT-2}}>✏️ 編集</button>
-          </div>
-          <div style={{...S.card,whiteSpace:"pre-wrap",lineHeight:1.8,fontSize:BASE_FONT,color:"#e8ecf4",minHeight:200,borderColor:vColor?.color||"#2a2f3d"}}>
-            {vText||<span style={{color:"#3d4560"}}>内容なし</span>}
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div>
-        {/* 日付選択 + 保存ボタン */}
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-          <input type="date" value={editDate.replace(/\//g,"-")}
-            onChange={e=>setEditDate(e.target.value.replace(/-/g,"/"))}
-            style={{flex:1,background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 12px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",colorScheme:"dark"}}/>
-          <button onClick={save} style={{background:saved?"#34d399":"#4f9eff",border:"none",borderRadius:8,padding:"8px 20px",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:BASE_FONT,transition:"background 0.3s"}}>
-            {saved?"✓ 保存済":"保存"}
-          </button>
-        </div>
-
-        {/* 色タグ */}
-        <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-          {DIARY_COLORS.map(c=>(
-            <button key={c.id} onClick={()=>setColor(c.id)} style={{
-              padding:"5px 10px",borderRadius:20,
-              border:`1.5px solid ${color===c.id?c.color:"#2a2f3d"}`,
-              background:color===c.id?`${c.color}22`:"transparent",
-              color:color===c.id?c.color:"#6b7a99",
-              cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700,
-            }}>
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* テキスト入力 */}
-        <textarea value={text} onChange={e=>setText(e.target.value)}
-          placeholder="今日のことを書いておこう..."
-          style={{width:"100%",boxSizing:"border-box",minHeight:200,background:"#1e2330",
-            border:`1px solid ${color!=="none"?(DIARY_COLORS.find(c=>c.id===color)?.color+"66")||"#2a2f3d":"#2a2f3d"}`,
-            borderRadius:10,padding:14,color:"#e8ecf4",fontSize:BASE_FONT,
-            resize:"vertical",outline:"none",lineHeight:1.8,fontFamily:"inherit",
-            display:"block",marginBottom:16}}/>
-
-        {/* 過去日記一覧 */}
-        {entries.length>0&&(
-          <div>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:8}}>📔 過去の日記</div>
-            {/* 色フィルタ */}
-            <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:10,paddingBottom:4,scrollbarWidth:"none"}}>
-              {DIARY_COLORS.filter(c=>c.id!=="none").map(c=>(
-                <button key={c.id} onClick={()=>setEditDate(entries.find(([,d])=>(typeof d==="object"?d?.color:""||"none")===c.id)?.[0]||editDate)}
-                  style={{flexShrink:0,padding:"3px 8px",borderRadius:20,border:`1px solid ${c.color}44`,background:`${c.color}11`,color:c.color,cursor:"pointer",fontSize:10,fontWeight:700}}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            {entries.slice(0,20).map(([date,d])=>{
-              const t=typeof d==="object"?d?.text:d;
-              const dc=getDC(d);
-              return (
-                <div key={date} onClick={()=>setViewDate(date)}
-                  style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 0",borderBottom:"1px solid #2a2f3d",cursor:"pointer"}}>
-                  {dc&&dc.id!=="none"&&<div style={{width:8,height:8,borderRadius:"50%",background:dc.color,flexShrink:0,marginTop:5}}/>}
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:BASE_FONT-2,fontWeight:700,color:dc?.color||"#4f9eff",marginBottom:2}}>{date}</div>
-                    <div style={{fontSize:BASE_FONT-3,color:"#6b7a99",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{t?.slice(0,50)}</div>
-                  </div>
-                  <span style={{fontSize:11,color:"#3d4560"}}>›</span>
-                </div>
-              );
-            })}
+      <div style={{position:"fixed",inset:0,zIndex:200,background:"#0d0f14",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        {/* ヘッダー */}
+        <div style={{position:"sticky",top:0,zIndex:10,background:"#0d0f14",borderBottom:"1px solid #2a2f3d",padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setDiaryModal(null)} style={{background:"none",border:"none",color:"#6b7a99",fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
+          <div style={{flex:1}}>
+            <div style={{fontSize:BASE_FONT+1,fontWeight:800,color:color!=="none"?selColor.color:"#e8ecf4"}}>📔 日記</div>
+            <div style={{fontSize:11,color:"#6b7a99"}}>{editDate}</div>
           </div>
-        )}
+          <button onClick={()=>setListMode(v=>!v)} style={{background:"rgba(255,255,255,0.05)",border:"1px solid #2a2f3d",borderRadius:8,padding:"6px 12px",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2}}>{listMode?"✏️ 編集":"📋 一覧"}</button>
+          {!listMode&&<button onClick={save} style={{background:saved?"#34d399":"#4f9eff",border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:BASE_FONT,transition:"background 0.3s"}}>{saved?"✓ 保存済":"保存"}</button>}
+        </div>
+
+        <div style={{padding:"16px",flex:1}}>
+          {listMode ? (
+            <div>
+              {entries.length===0&&<div style={{textAlign:"center",color:"#3d4560",padding:40}}>日記がまだありません</div>}
+              {entries.map(([date,d])=>{
+                const t=typeof d==="object"?d?.text:d;
+                const dc=DIARY_COLORS.find(c=>c.id===(typeof d==="object"?d?.color||"none":"none"));
+                const preview=t?.trim().split("\n")[0]?.slice(0,60)||"";
+                return (
+                  <div key={date} onClick={()=>loadDate(date)} style={{padding:"14px 0",borderBottom:"1px solid #2a2f3d",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{width:4,borderRadius:2,alignSelf:"stretch",background:dc&&dc.id!=="none"?dc.color:"#2a2f3d",flexShrink:0,minHeight:40}}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:BASE_FONT-2,fontWeight:700,color:dc?.color||"#94a3b8",marginBottom:4}}>{date}</div>
+                      <div style={{fontSize:BASE_FONT-1,color:"#e8ecf4",lineHeight:1.5}}>{preview}</div>
+                    </div>
+                    <span style={{color:"#3d4560",fontSize:14,paddingTop:2}}>›</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div>
+              <input type="date" value={editDate.replace(/\//g,"-")} onChange={e=>loadDate(e.target.value.replace(/-/g,"/"))}
+                style={{width:"100%",boxSizing:"border-box",background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"10px 12px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",colorScheme:"dark",marginBottom:12}}/>
+              <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+                {DIARY_COLORS.map(c=>(
+                  <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:"#2a2f3d"}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
+                ))}
+              </div>
+              <textarea value={text} onChange={e=>setText(e.target.value)} placeholder={`${editDate} の日記を書く...`}
+                style={{width:"100%",boxSizing:"border-box",minHeight:"55vh",background:"#1e2330",border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,borderRadius:12,padding:16,color:"#e8ecf4",fontSize:BASE_FONT+1,resize:"none",outline:"none",lineHeight:1.9,fontFamily:"inherit",display:"block"}}
+                autoFocus/>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -782,7 +749,7 @@ export default function App() {
           </div>
         </div>
         <div style={S.tabs}>
-          {[{id:"task",label:"タスク"},{id:"timer",label:"タイマー"},{id:"log",label:"記録"},{id:"diary",label:"📔 日記"}].map(t=>(
+          {[{id:"task",label:"タスク"},{id:"timer",label:"タイマー"},{id:"log",label:"記録"}].map(t=>(
             <button key={t.id} style={S.tab(tab===t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>
           ))}
         </div>
@@ -792,11 +759,11 @@ export default function App() {
         {tab==="task"&&<TaskTab/>}
         {tab==="timer"&&<TimerTab/>}
         {tab==="log"&&<LogTab/>}
-        {tab==="diary"&&<DiaryTab/>}
       </div>
 
       {showMonthly&&<MonthlyTaskModal tasks={monthlyTasks} onSave={t=>{setMonthlyTasks(t);setShowMonthly(false);}} onClose={()=>setShowMonthly(false)}/>}
       {showGoogleCal&&<GoogleCalendarModal onImport={evts=>setCalendarEvents(p=>[...p,...evts])} onClose={()=>setShowGoogleCal(false)}/>}
+      {diaryModal&&<DiaryScreen/>}
       {showWeekHistory&&<WeekHistoryModal history={weekHistory} onClose={()=>setShowWeekHistory(false)}/>}
       {showLongTerm&&<LongTermModal tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)}/>}
       {showWeeklyMgr&&<WeeklyTemplateManager templates={weeklyTemplates} onSave={saveWeeklyTemplates} onClose={()=>setShowWeeklyMgr(false)}/>}
