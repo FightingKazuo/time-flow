@@ -172,10 +172,30 @@ export default function App() {
       orange:"#fb923c", amber:"#fbbf24", pink:"#f472b6",
     };
     const bgMode  = LS.get("tf_bgmode","dark");
-    const accent  = LS.get("tf_accent","blue");
     const isDark  = bgMode==="dark";
     document.body.style.background    = isDark?"#0d0f14":"#f0f4f8";
     document.body.style.color         = isDark?"#e8ecf4":"#1e293b";
+    // ライトモード用CSSを動的挿入
+    const existing = document.getElementById('tf-theme-css');
+    if(existing) existing.remove();
+    if(!isDark){
+      const style = document.createElement('style');
+      style.id = 'tf-theme-css';
+      style.textContent = `
+        * { box-sizing: border-box; }
+        [style*="#1e2330"], [style*="rgb(30, 35, 48)"] { background-color: #ffffff !important; }
+        [style*="#161920"], [style*="rgb(22, 25, 32)"] { background-color: #f8fafc !important; }
+        [style*="#0d0f14"], [style*="rgb(13, 15, 20)"] { background-color: #f0f4f8 !important; }
+        [style*="border: 1px solid #2a2f3d"] { border-color: #e2e8f0 !important; }
+        [style*="border: 1.5px solid #2a2f3d"] { border-color: #e2e8f0 !important; }
+        [style*="color: rgb(107, 122, 153)"] { color: #64748b !important; }
+        [style*="color: #6b7a99"] { color: #64748b !important; }
+        [style*="color: rgb(61, 69, 96)"] { color: #94a3b8 !important; }
+        [style*="color: #e8ecf4"] { color: #1e293b !important; }
+        textarea, input, select { background-color: #f8fafc !important; color: #1e293b !important; border-color: #e2e8f0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
   },[]);
 
   const getDiaryText  = d => typeof d==="object" ? d?.text  : d;
@@ -625,7 +645,7 @@ export default function App() {
 
           {/* バージョン情報 */}
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:`${_sub}88`}}>TimeFlow v2.7.1</div>
+            <div style={{fontSize:12,color:`${_sub}88`}}>TimeFlow v2.7.2</div>
           </div>
         </div>
       </div>
@@ -877,7 +897,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:_sub}}>タスク & 時間管理 <span style={{color:`${_sub}88`,marginLeft:4}}>v2.7.1</span></div>
+            <div style={{fontSize:10,color:_sub}}>タスク & 時間管理 <span style={{color:`${_sub}88`,marginLeft:4}}>v2.7.2</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:`${_sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
