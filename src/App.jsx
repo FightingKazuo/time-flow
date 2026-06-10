@@ -51,6 +51,7 @@ export default function App() {
   const [studyCatId,   setStudyCatId]   = useState(()=>LS.get("tf_studyCatId",   "study"));
   const [showCatMgr,   setShowCatMgr]   = useState(false);
   const [showBackup,   setShowBackup]   = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showWeeklyMgr,setShowWeeklyMgr]= useState(false);
   const [weeklyTemplates,setWeeklyTemplates]=useState(()=>LS.get("tf_weeklyTpls", WEEKLY_DEFAULTS));
   const [longTermTasks, setLongTermTasks] = useState(()=>LS.get("tf_longTerm", []));
@@ -164,6 +165,21 @@ export default function App() {
     setCustomTasks(p=>({...p,[toDay]:[...p[toDay],{...task,id:Date.now(),weekly:false}]}));
     setMovePopup(null);
   };
+  // テーマ起動時適用
+  useEffect(()=>{
+    const THEME_MAP = {
+      blue:   {primary:"#4f9eff", bg:"#0d0f14"},
+      green:  {primary:"#34d399", bg:"#0a0f0c"},
+      purple: {primary:"#a78bfa", bg:"#0d0a14"},
+      orange: {primary:"#fb923c", bg:"#140c0a"},
+      amber:  {primary:"#fbbf24", bg:"#120f08"},
+      pink:   {primary:"#f472b6", bg:"#14090f"},
+      white:  {primary:"#2563eb", bg:"#f0f4f8"},
+    };
+    const t = THEME_MAP[LS.get("tf_theme","blue")]||THEME_MAP.blue;
+    document.body.style.background = t.bg;
+  },[]);
+
   const getDiaryText  = d => typeof d==="object" ? d?.text  : d;
   const getDiaryColor = d => typeof d==="object" ? (d?.color||"none") : "none";
   const saveDiary = (date, value) => setDiaries(p=>({...p,[date]:value}));
@@ -490,11 +506,114 @@ export default function App() {
     );
   };
 
+  // ── Settings Screen ────────────────────────────────────────────────────────
+  const SettingsScreen=()=>{
+    const [editGoal,  setEditGoal]  = useState(false);
+    const [gInput,    setGInput]    = useState(String(goalHours));
+
+    // カラーテーマ
+    const THEMES = [
+      {id:"blue",   label:"ダークブルー",   primary:"#4f9eff", bg:"#0d0f14", card:"#1e2330", text:"#e8ecf4"},
+      {id:"green",  label:"ミッドナイト",   primary:"#34d399", bg:"#0a0f0c", card:"#1a2420", text:"#e8ecf4"},
+      {id:"purple", label:"ディープ紫",     primary:"#a78bfa", bg:"#0d0a14", card:"#1e1a2e", text:"#e8ecf4"},
+      {id:"orange", label:"サンセット",     primary:"#fb923c", bg:"#140c0a", card:"#231810", text:"#e8ecf4"},
+      {id:"amber",  label:"アンバー",       primary:"#fbbf24", bg:"#120f08", card:"#221c0a", text:"#e8ecf4"},
+      {id:"pink",   label:"ローズ",         primary:"#f472b6", bg:"#14090f", card:"#231020", text:"#e8ecf4"},
+      {id:"white",  label:"ライト",         primary:"#2563eb", bg:"#f0f4f8", card:"#ffffff",  text:"#1e293b"},
+    ];
+    const currentTheme = LS.get("tf_theme","blue");
+
+    const applyTheme = (themeId) => {
+      LS.set("tf_theme", themeId);
+      const t = THEMES.find(x=>x.id===themeId)||THEMES[0];
+      // CSS変数でアプリ全体の色を変える
+      document.documentElement.style.setProperty('--tf-bg',      t.bg);
+      document.documentElement.style.setProperty('--tf-card',    t.card);
+      document.documentElement.style.setProperty('--tf-primary', t.primary);
+      document.documentElement.style.setProperty('--tf-text',    t.text);
+      document.body.style.background = t.bg;
+      // 目標カテゴリーの色をアクセントカラーに更新
+      setCategories(prev => prev.map(c =>
+        c.id===studyCatId ? {...c, color:t.primary} : c
+      ));
+      // ページ再描画のためにstateをトリガー
+      window.location.reload();
+    };
+
+    return (
+      <div style={{position:"fixed",inset:0,zIndex:300,background:"#0d0f14",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        {/* ヘッダー */}
+        <div style={{position:"sticky",top:0,zIndex:10,background:"#0d0f14",borderBottom:"1px solid #2a2f3d",padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setShowSettings(false)} style={{background:"none",border:"none",color:"#6b7a99",fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
+          <div style={{fontSize:BASE_FONT+1,fontWeight:800}}>⚙️ 設定</div>
+        </div>
+
+        <div style={{padding:16,display:"flex",flexDirection:"column",gap:16}}>
+
+          {/* カラーテーマ */}
+          <div style={{...S.card}}>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>🎨 カラーテーマ</div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {THEMES.map(t=>(
+                <button key={t.id} onClick={()=>applyTheme(t.id)} style={{
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:6,
+                  padding:"10px 14px",borderRadius:12,cursor:"pointer",
+                  border:`2px solid ${currentTheme===t.id?t.primary:"#2a2f3d"}`,
+                  background:currentTheme===t.id?`${t.primary}18`:"#161920",
+                  flex:1,minWidth:60,
+                }}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:t.primary,boxShadow:currentTheme===t.id?`0 0 12px ${t.primary}`:"none"}}/>
+                  <span style={{fontSize:10,color:currentTheme===t.id?t.primary:"#6b7a99",fontWeight:700}}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 勉強目標設定 */}
+          <div style={{...S.card}}>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>📊 勉強目標</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
+              <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"6px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
+                {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
+              {editGoal
+                ?<div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <input style={{...S.input,width:60,textAlign:"center"}} type="number" min="1" max="168" value={gInput} onChange={e=>setGInput(e.target.value)}/>
+                  <span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span>
+                  <button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button>
+                </div>
+                :<div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontFamily:"monospace",fontSize:16,fontWeight:800,color:"#34d399"}}>{goalHours}h</span>
+                  <button style={{...S.btn("#2a2f3d"),padding:"6px 12px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button>
+                </div>
+              }
+            </div>
+          </div>
+
+          {/* Googleカレンダー */}
+          <div style={{...S.card}}>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>📅 Googleカレンダー</div>
+            <button onClick={()=>{setShowSettings(false);setShowGoogleCal(true);}} style={{width:"100%",background:"rgba(66,133,244,0.08)",border:"1px solid rgba(66,133,244,0.25)",borderRadius:10,padding:"12px 0",color:"#4285f4",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700}}>
+              Googleカレンダーを同期
+            </button>
+          </div>
+
+          {/* バージョン情報 */}
+          <div style={{textAlign:"center",padding:16}}>
+            <div style={{fontSize:12,color:"#3d4560"}}>TimeFlow v2.7.0</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Log Tab ─────────────────────────────────────────────────────────────────
   const LogTab=()=>{
     const [showList,  setShowList]  = useState(false);
-    const [editGoal,  setEditGoal]  = useState(false);
-    const [gInput,    setGInput]    = useState(String(goalHours));
     const [tooltip,   setTooltip]   = useState(null);
 
     const now = new Date();
@@ -596,24 +715,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ③ 目標設定 */}
-        <div style={{...S.card,marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
-            <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
-              {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
-            {editGoal
-              ?<div style={{display:"flex",gap:6,alignItems:"center"}}><input style={{...S.input,width:54,textAlign:"center"}} type="number" min="1" value={gInput} onChange={e=>setGInput(e.target.value)}/><span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span><button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button></div>
-              :<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:"monospace",fontSize:14,fontWeight:800,color:"#34d399"}}>{goalHours}h</span><button style={{...S.btn("#2a2f3d"),padding:"5px 10px",fontSize:BASE_FONT-2}} onClick={()=>setEditGoal(true)}>変更</button></div>
-            }
-          </div>
-        </div>
-
-        {/* ④ ヒートマップ（一番下） */}
+        {/* ③ ヒートマップ（一番下） */}
         <div style={{...S.card,background:"#161920",marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div>
@@ -754,10 +856,11 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.3</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.7.0</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
+            <button onClick={()=>setShowSettings(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>⚙️</button>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:running?"#34d399":"#3d4560",boxShadow:running?"0 0 8px #34d399":"none"}}/>
               <span style={{fontSize:10,color:running?"#34d399":"#3d4560",fontFamily:"monospace"}}>{running?fmtTime(elapsed):"待機中"}</span>
@@ -777,6 +880,7 @@ export default function App() {
         {tab==="log"&&<LogTab/>}
       </div>
 
+      {showSettings&&<SettingsScreen/>}
       {showMonthly&&<MonthlyTaskModal tasks={monthlyTasks} onSave={t=>{setMonthlyTasks(t);setShowMonthly(false);}} onClose={()=>setShowMonthly(false)}/>}
       {showGoogleCal&&<GoogleCalendarModal onImport={evts=>setCalendarEvents(p=>[...p,...evts])} onClose={()=>setShowGoogleCal(false)}/>}
       {diaryModal&&<DiaryScreen/>}
