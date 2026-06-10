@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { LS, DAYS_LABEL, WEEKLY_DEFAULTS, getWeekMonday, buildWeeklyTasks, todayStr, todayDayIdx, pad, fmtDate, getDayDate } from "../constants";
+import { LS, DAYS_LABEL, WEEKLY_DEFAULTS, getWeekMonday, buildWeeklyTasks, todayDayIdx, pad, fmtDate } from "../constants";
 
 const getWeekKey = () => {
   const m = getWeekMonday();
@@ -13,17 +13,17 @@ const getWeekLabel = () => {
 
 export function useWeekReset({
   setWeeklyTasks, setCustomTasks, setLongTermTasks,
-  setWeekHistory, weeklyTemplates, longTermTasks,
+  setWeekHistory, weeklyTemplates,
 }) {
   const doWeekReset = useCallback(() => {
     const key = getWeekKey();
     const savedKey = LS.get("tf_currentWeekKey","");
     if(savedKey && savedKey !== key){
       const snapshot = {
-        weekKey: savedKey,
-        weekLabel: LS.get("tf_lastWeekLabel", savedKey),
+        weekKey:     savedKey,
+        weekLabel:   LS.get("tf_lastWeekLabel", savedKey),
         weeklyTasks: LS.get("tf_weeklyTasks",{}),
-        customTasks:  LS.get("tf_customTasks",{}),
+        customTasks: LS.get("tf_customTasks",{}),
       };
       setWeekHistory(prev => {
         const next = [snapshot,...prev].slice(0,52);
@@ -36,7 +36,7 @@ export function useWeekReset({
     }
     LS.set("tf_currentWeekKey", key);
     LS.set("tf_lastWeekLabel",  getWeekLabel());
-  },[setWeeklyTasks, setCustomTasks, setLongTermTasks, setWeekHistory, weeklyTemplates]);
+  },[setWeeklyTasks, setCustomTasks, setLongTermTasks, setWeekHistory]);
 
   const injectLongTermTasks = useCallback(() => {
     const mon = getWeekMonday();
@@ -67,6 +67,4 @@ export function useWeekReset({
     const id = setInterval(()=>{ doWeekReset(); injectLongTermTasks(); }, 60000);
     return () => clearInterval(id);
   },[doWeekReset, injectLongTermTasks]);
-
-  return { injectLongTermTasks };
 }
