@@ -165,19 +165,17 @@ export default function App() {
     setCustomTasks(p=>({...p,[toDay]:[...p[toDay],{...task,id:Date.now(),weekly:false}]}));
     setMovePopup(null);
   };
-  // テーマ起動時適用
+  // テーマ起動時適用（背景モード + アクセント）
   useEffect(()=>{
-    const THEME_MAP = {
-      blue:   {primary:"#4f9eff", bg:"#0d0f14"},
-      green:  {primary:"#34d399", bg:"#0a0f0c"},
-      purple: {primary:"#a78bfa", bg:"#0d0a14"},
-      orange: {primary:"#fb923c", bg:"#140c0a"},
-      amber:  {primary:"#fbbf24", bg:"#120f08"},
-      pink:   {primary:"#f472b6", bg:"#14090f"},
-      white:  {primary:"#2563eb", bg:"#f0f4f8"},
+    const ACCENT_MAP = {
+      blue:"#4f9eff", green:"#34d399", purple:"#a78bfa",
+      orange:"#fb923c", amber:"#fbbf24", pink:"#f472b6",
     };
-    const t = THEME_MAP[LS.get("tf_theme","blue")]||THEME_MAP.blue;
-    document.body.style.background = t.bg;
+    const bgMode  = LS.get("tf_bgmode","dark");
+    const accent  = LS.get("tf_accent","blue");
+    const isDark  = bgMode==="dark";
+    document.body.style.background    = isDark?"#0d0f14":"#f0f4f8";
+    document.body.style.color         = isDark?"#e8ecf4":"#1e293b";
   },[]);
 
   const getDiaryText  = d => typeof d==="object" ? d?.text  : d;
@@ -185,16 +183,25 @@ export default function App() {
   const saveDiary = (date, value) => setDiaries(p=>({...p,[date]:value}));
   const reorderCategories=(newOrder)=>setCategories(newOrder);
 
+  const _isDark = LS.get("tf_bgmode","dark")==="dark";
+  const _accent = {blue:"#4f9eff",green:"#34d399",purple:"#a78bfa",orange:"#fb923c",amber:"#fbbf24",pink:"#f472b6"}[LS.get("tf_accent","blue")]||"#4f9eff";
+  const _bg     = _isDark ? "#0d0f14" : "#f0f4f8";
+  const _card   = _isDark ? "#1e2330" : "#ffffff";
+  const _card2  = _isDark ? "#161920" : "#f8fafc";
+  const _border = _isDark ? "#2a2f3d" : "#e2e8f0";
+  const _text   = _isDark ? "#e8ecf4" : "#1e293b";
+  const _sub    = _isDark ? "#6b7a99" : "#64748b";
+
   const S={
-    app:{minHeight:"100vh",background:"#0d0f14",color:"#e8ecf4",fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
-    header:{padding:"14px 16px 0",borderBottom:"1px solid #2a2f3d"},
+    app:{minHeight:"100vh",background:_bg,color:_text,fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
+    header:{padding:"14px 16px 0",borderBottom:`1px solid ${_border}`,background:_bg},
     tabs:{display:"flex",gap:2,marginTop:10},
-    tab:a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${catColor}`:"2px solid transparent",background:"transparent",color:a?catColor:"#3d4560",cursor:"pointer",transition:"all 0.2s"}),
+    tab:a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${catColor}`:"2px solid transparent",background:"transparent",color:a?catColor:_sub,cursor:"pointer",transition:"all 0.2s"}),
     body:{flex:1,padding:"12px 12px",overflowY:"auto"},
-    card:{background:"#1e2330",borderRadius:12,border:"1px solid #2a2f3d",padding:12,marginBottom:10},
-    input:{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"7px 10px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",flex:1},
-    btn:(bg="#4f9eff")=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:BASE_FONT-1,fontWeight:700,cursor:"pointer"}),
-    btnSm:(a,c)=>({padding:"5px 10px",fontSize:BASE_FONT-2,fontWeight:700,border:`1px solid ${a?c:"#2a2f3d"}`,borderRadius:20,background:a?`rgba(${hexRgb(c)},0.2)`:"transparent",color:a?c:"#6b7a99",cursor:"pointer"}),
+    card:{background:_card,borderRadius:12,border:`1px solid ${_border}`,padding:12,marginBottom:10},
+    input:{background:_card2,border:`1px solid ${_border}`,borderRadius:8,padding:"7px 10px",color:_text,fontSize:BASE_FONT,outline:"none",flex:1},
+    btn:(bg=_accent)=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:BASE_FONT-1,fontWeight:700,cursor:"pointer"}),
+    btnSm:(a,c)=>({padding:"5px 10px",fontSize:BASE_FONT-2,fontWeight:700,border:`1px solid ${a?c:_border}`,borderRadius:20,background:a?`rgba(${hexRgb(c)},0.2)`:"transparent",color:a?c:_sub,cursor:"pointer"}),
   };
 
   // ── Task Tab ──────────────────────────────────────────────────────────────
@@ -512,31 +519,23 @@ export default function App() {
     const [gInput,    setGInput]    = useState(String(goalHours));
 
     // カラーテーマ
-    const THEMES = [
-      {id:"blue",   label:"ダークブルー",   primary:"#4f9eff", bg:"#0d0f14", card:"#1e2330", text:"#e8ecf4"},
-      {id:"green",  label:"ミッドナイト",   primary:"#34d399", bg:"#0a0f0c", card:"#1a2420", text:"#e8ecf4"},
-      {id:"purple", label:"ディープ紫",     primary:"#a78bfa", bg:"#0d0a14", card:"#1e1a2e", text:"#e8ecf4"},
-      {id:"orange", label:"サンセット",     primary:"#fb923c", bg:"#140c0a", card:"#231810", text:"#e8ecf4"},
-      {id:"amber",  label:"アンバー",       primary:"#fbbf24", bg:"#120f08", card:"#221c0a", text:"#e8ecf4"},
-      {id:"pink",   label:"ローズ",         primary:"#f472b6", bg:"#14090f", card:"#231020", text:"#e8ecf4"},
-      {id:"white",  label:"ライト",         primary:"#2563eb", bg:"#f0f4f8", card:"#ffffff",  text:"#1e293b"},
+    const ACCENT_COLORS = [
+      {id:"blue",   label:"ブルー",   color:"#4f9eff"},
+      {id:"green",  label:"グリーン", color:"#34d399"},
+      {id:"purple", label:"パープル", color:"#a78bfa"},
+      {id:"orange", label:"オレンジ", color:"#fb923c"},
+      {id:"amber",  label:"アンバー", color:"#fbbf24"},
+      {id:"pink",   label:"ピンク",   color:"#f472b6"},
     ];
-    const currentTheme = LS.get("tf_theme","blue");
 
-    const applyTheme = (themeId) => {
-      LS.set("tf_theme", themeId);
-      const t = THEMES.find(x=>x.id===themeId)||THEMES[0];
-      // CSS変数でアプリ全体の色を変える
-      document.documentElement.style.setProperty('--tf-bg',      t.bg);
-      document.documentElement.style.setProperty('--tf-card',    t.card);
-      document.documentElement.style.setProperty('--tf-primary', t.primary);
-      document.documentElement.style.setProperty('--tf-text',    t.text);
-      document.body.style.background = t.bg;
-      // 目標カテゴリーの色をアクセントカラーに更新
-      setCategories(prev => prev.map(c =>
-        c.id===studyCatId ? {...c, color:t.primary} : c
-      ));
-      // ページ再描画のためにstateをトリガー
+    const savedAccent  = LS.get("tf_accent", "blue");
+    const savedBgMode  = LS.get("tf_bgmode", "dark");
+    const [accent,  setAccentLocal]  = useState(savedAccent);
+    const [bgMode,  setBgModeLocal]  = useState(savedBgMode);
+
+    const applyTheme = (newAccent, newBgMode) => {
+      LS.set("tf_accent", newAccent);
+      LS.set("tf_bgmode", newBgMode);
       window.location.reload();
     };
 
@@ -552,21 +551,43 @@ export default function App() {
 
           {/* カラーテーマ */}
           <div style={{...S.card}}>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>🎨 カラーテーマ</div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {THEMES.map(t=>(
-                <button key={t.id} onClick={()=>applyTheme(t.id)} style={{
-                  display:"flex",flexDirection:"column",alignItems:"center",gap:6,
-                  padding:"10px 14px",borderRadius:12,cursor:"pointer",
-                  border:`2px solid ${currentTheme===t.id?t.primary:"#2a2f3d"}`,
-                  background:currentTheme===t.id?`${t.primary}18`:"#161920",
-                  flex:1,minWidth:60,
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>🎨 テーマ設定</div>
+
+            {/* 背景モード */}
+            <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:8}}>背景</div>
+            <div style={{display:"flex",gap:10,marginBottom:16}}>
+              {[{id:"dark",label:"🌙 ダーク（黒）"},{id:"light",label:"☀️ ライト（白）"}].map(m=>(
+                <button key={m.id} onClick={()=>setBgModeLocal(m.id)} style={{
+                  flex:1,padding:"10px 0",borderRadius:10,cursor:"pointer",
+                  border:`2px solid ${bgMode===m.id?(ACCENT_COLORS.find(a=>a.id===accent)?.color||"#4f9eff"):"#2a2f3d"}`,
+                  background:bgMode===m.id?"rgba(255,255,255,0.06)":"transparent",
+                  color:bgMode===m.id?"#e8ecf4":"#6b7a99",fontSize:BASE_FONT-2,fontWeight:700,
+                }}>{m.label}</button>
+              ))}
+            </div>
+
+            {/* アクセントカラー */}
+            <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:8}}>アクセントカラー</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+              {ACCENT_COLORS.map(a=>(
+                <button key={a.id} onClick={()=>setAccentLocal(a.id)} style={{
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:5,
+                  padding:"10px 12px",borderRadius:12,cursor:"pointer",flex:1,minWidth:55,
+                  border:`2px solid ${accent===a.id?a.color:"#2a2f3d"}`,
+                  background:accent===a.id?`${a.color}18`:"transparent",
                 }}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:t.primary,boxShadow:currentTheme===t.id?`0 0 12px ${t.primary}`:"none"}}/>
-                  <span style={{fontSize:10,color:currentTheme===t.id?t.primary:"#6b7a99",fontWeight:700}}>{t.label}</span>
+                  <div style={{width:24,height:24,borderRadius:"50%",background:a.color,boxShadow:accent===a.id?`0 0 10px ${a.color}`:"none"}}/>
+                  <span style={{fontSize:9,color:accent===a.id?a.color:"#6b7a99",fontWeight:700}}>{a.label}</span>
                 </button>
               ))}
             </div>
+
+            {/* 適用ボタン */}
+            <button onClick={()=>applyTheme(accent, bgMode)} style={{
+              width:"100%",padding:"12px 0",borderRadius:10,
+              background:ACCENT_COLORS.find(a=>a.id===accent)?.color||"#4f9eff",
+              border:"none",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:BASE_FONT,
+            }}>✓ テーマを適用</button>
           </div>
 
           {/* 勉強目標設定 */}
