@@ -210,16 +210,16 @@ export default function App() {
     return (
       <div>
         {/* Timeline bar */}
-        <div style={{...S.card,background:"#161920",borderColor:"rgba(79,158,255,0.2)"}}>
+        <div style={{...S.card,background:_card2,borderColor:"rgba(79,158,255,0.2)"}}>
           <TimelineBar logs={logs} categories={categories} date={todayStr()}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
             <div>
-              <div style={{fontSize:10,color:"#6b7a99"}}>今日の合計</div>
+              <div style={{fontSize:10,color:_sub}}>今日の合計</div>
               <div style={{fontSize:20,fontWeight:800,color:catColor,fontFamily:"monospace"}}>{fmtTime(todayTotal)}</div>
-              <div style={{fontSize:10,color:"#6b7a99"}}>{fmtHMS(todayTotal)}</div>
+              <div style={{fontSize:10,color:_sub}}>{fmtHMS(todayTotal)}</div>
             </div>
             <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowDiaryList(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid #2a2f3d",borderRadius:8,padding:"7px 10px",cursor:"pointer",color:"#6b7a99",fontSize:BASE_FONT-1,fontWeight:600}}>📔 一覧</button>
+              <button onClick={()=>setShowDiaryList(true)} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${_border}`,borderRadius:8,padding:"7px 10px",cursor:"pointer",color:_sub,fontSize:BASE_FONT-1,fontWeight:600}}>📔 一覧</button>
               <button onClick={()=>setDiaryModal(todayStr())} style={{background:(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"#fbbf24":"#2a2f3d"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer",color:(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"#fbbf24":"#6b7a99",fontSize:BASE_FONT-1,fontWeight:600}}>
                 {diaries[todayStr()]?"📔 今日":"✏️ 日記"}
               </button>
@@ -229,7 +229,7 @@ export default function App() {
 
         <div style={{fontSize:BASE_FONT,fontWeight:800,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>📋 今週のタスク</span>
-          <button onClick={()=>setShowWeekHistory(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid #2a2f3d",borderRadius:8,padding:"5px 10px",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700}}>
+          <button onClick={()=>setShowWeekHistory(true)} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${_border}`,borderRadius:8,padding:"5px 10px",color:_sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700}}>
             📅 週間履歴
           </button>
         </div>
@@ -246,7 +246,7 @@ export default function App() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:"#94a3b8"}}>{day}</span>
-                    <span style={{fontSize:10,color:"#3d4560"}}>{dayDateStr(i)}</span>
+                    <span style={{fontSize:10,color:`${_sub}88`}}>{dayDateStr(i)}</span>
                     {/* diary button */}
                     <button onClick={()=>setDiaryModal(dayDate)} style={{
                       background:hasDiary?"rgba(251,191,36,0.2)":"rgba(255,255,255,0.06)",
@@ -261,7 +261,7 @@ export default function App() {
                   </div>
                   {all.length>0&&<span style={{fontSize:9,fontWeight:700,color:done===all.length?"#34d399":"#6b7a99"}}>{done}/{all.length}</span>}
                 </div>
-                {all.length===0&&<div style={{fontSize:10,color:"#3d4560",textAlign:"center",padding:"4px 0"}}>—</div>}
+                {all.length===0&&<div style={{fontSize:10,color:`${_sub}88`,textAlign:"center",padding:"4px 0"}}>—</div>}
                 {/* カレンダー予定（上部・チェックなし） */}
                 {(()=>{
                   const d = getDayDate(i);
@@ -270,13 +270,13 @@ export default function App() {
                     <div key={e.id} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 6px",marginBottom:3,background:"rgba(66,133,244,0.08)",borderRadius:6,border:"1px solid rgba(66,133,244,0.2)"}}>
                       <span style={{fontSize:10,flexShrink:0}}>📅</span>
                       <span style={{fontSize:BASE_FONT-3,color:"#4285f4",fontWeight:600,flex:1,lineHeight:1.3}}>{e.title}</span>
-                      {e.time&&<span style={{fontSize:9,color:"#6b7a99",flexShrink:0}}>{e.time}</span>}
+                      {e.time&&<span style={{fontSize:9,color:_sub,flexShrink:0}}>{e.time}</span>}
                     </div>
                   ));
                 })()}
                 {all.map(t=>(
-                  <div key={t.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 0",borderBottom:"1px solid #2a2f3d",opacity:t.done?0.4:1}}>
-                    <button onClick={()=>setMovePopup({task:t,fromDay:i})} style={{background:"none",border:"none",color:"#3d4560",fontSize:14,flexShrink:0,cursor:"pointer",padding:"1px 2px",lineHeight:1}} title="移動">⇄</button>
+                  <div key={t.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 0",borderBottom:`1px solid ${_border}`,opacity:t.done?0.4:1}}>
+                    <button onClick={()=>setMovePopup({task:t,fromDay:i})} style={{background:"none",border:"none",color:`${_sub}88`,fontSize:14,flexShrink:0,cursor:"pointer",padding:"1px 2px",lineHeight:1}} title="移動">⇄</button>
                     <div onClick={()=>toggleTask(i,t.id,t.weekly)} style={{width:14,height:14,borderRadius:4,flexShrink:0,border:`2px solid ${t.done?"#34d399":"#3d4560"}`,background:t.done?"#34d399":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       {t.done&&<span style={{color:"#fff",fontSize:9}}>✓</span>}
                     </div>
@@ -286,12 +286,12 @@ export default function App() {
                     {/* 削除ボタン */}
                     {!t.weekly&&<button onClick={()=>{
                       setCustomTasks(p=>({...p,[i]:p[i].filter(x=>x.id!==t.id)}));
-                    }} style={{background:"none",border:"none",color:"#3d4560",fontSize:13,flexShrink:0,cursor:"pointer",padding:"1px 3px",lineHeight:1}}>✕</button>}
+                    }} style={{background:"none",border:"none",color:`${_sub}88`,fontSize:13,flexShrink:0,cursor:"pointer",padding:"1px 3px",lineHeight:1}}>✕</button>}
                   </div>
                 ))}
                 {addingDay===i
                   ?<TaskInput onAdd={label=>{ setCustomTasks(p=>({...p,[i]:[...p[i],{id:Date.now(),label,done:false}]})); setAddingDay(null); }} onCancel={()=>setAddingDay(null)} inputStyle={{...S.input,fontSize:BASE_FONT-1,padding:"5px 8px"}} btnStyle={S.btn}/>
-                  :<button onClick={()=>setAddingDay(i)} style={{width:"100%",background:"none",border:"1px dashed #2a2f3d",borderRadius:6,padding:"5px 0",color:"#3d4560",cursor:"pointer",fontSize:16,marginTop:6}}>+</button>
+                  :<button onClick={()=>setAddingDay(i)} style={{width:"100%",background:"none",border:"1px dashed #2a2f3d",borderRadius:6,padding:"5px 0",color:`${_sub}88`,cursor:"pointer",fontSize:16,marginTop:6}}>+</button>
                 }
               </div>
             );
@@ -315,7 +315,7 @@ export default function App() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div>
               <div style={{fontSize:BASE_FONT,fontWeight:800}}>📌 長期タスク</div>
-              <div style={{fontSize:11,color:"#6b7a99"}}>週をまたいで管理</div>
+              <div style={{fontSize:11,color:_sub}}>週をまたいで管理</div>
             </div>
             <button onClick={()=>setShowLongTerm(true)} style={{background:"rgba(251,146,60,0.1)",border:"1px solid rgba(251,146,60,0.3)",borderRadius:8,padding:"7px 14px",color:"#fb923c",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>
               編集 / 追加
@@ -323,13 +323,13 @@ export default function App() {
           </div>
           {/* Active long-term tasks preview */}
           {longTermTasks.filter(t=>!t.done).length===0
-            ?<div style={{textAlign:"center",color:"#3d4560",fontSize:BASE_FONT-2,padding:"10px 0"}}>タスクなし　→「編集 / 追加」から追加できます</div>
+            ?<div style={{textAlign:"center",color:`${_sub}88`,fontSize:BASE_FONT-2,padding:"10px 0"}}>タスクなし　→「編集 / 追加」から追加できます</div>
             :longTermTasks.filter(t=>!t.done).map(t=>(
-              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#1e2330",borderRadius:8,marginBottom:6,border:"1px solid #2a2f3d"}}>
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:_card,borderRadius:8,marginBottom:6,border:`1px solid ${_border}`}}>
                 <div onClick={()=>setLongTermTasks(p=>p.map(x=>x.id===t.id?{...x,done:true,doneAt:todayStr()}:x))} style={{width:18,height:18,borderRadius:4,flexShrink:0,border:"2px solid #fb923c",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 </div>
                 <span style={{fontSize:BASE_FONT-1,flex:1}}>{t.label}</span>
-                <span style={{fontSize:10,color:"#3d4560"}}>{t.createdAt}</span>
+                <span style={{fontSize:10,color:`${_sub}88`}}>{t.createdAt}</span>
               </div>
             ))
           }
@@ -346,7 +346,7 @@ export default function App() {
     const studyCatName = categories.find(c=>c.id===studyCatId)?.name||"勉強";
 
     return (
-    <div style={running?{position:"fixed",inset:0,zIndex:88,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:440,margin:"0 auto"}}>
+    <div style={running?{position:"fixed",inset:0,zIndex:88,background:_bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}:{maxWidth:440,margin:"0 auto"}}>
       {!running&&(
         <>
           <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
@@ -354,7 +354,7 @@ export default function App() {
           </div>
           <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} disabled={false}/>
           <div style={{textAlign:"center",marginBottom:10}}>
-            <button style={{background:"none",border:"none",color:"#3d4560",fontSize:BASE_FONT-2,cursor:"pointer"}} onClick={()=>setShowCatMgr(true)}>⚙ カテゴリーを管理</button>
+            <button style={{background:"none",border:"none",color:`${_sub}88`,fontSize:BASE_FONT-2,cursor:"pointer"}} onClick={()=>setShowCatMgr(true)}>⚙ カテゴリーを管理</button>
           </div>
           {mode==="pomodoro"&&(
             <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12,flexWrap:"wrap"}}>
@@ -381,9 +381,9 @@ export default function App() {
       {/* 今日の合計（タイマーモードのみ） */}
       {mode==="timer"&&(
         <div style={{textAlign:"center",marginBottom:10}}>
-          <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:2}}>今日の{studyCatName}時間</div>
+          <div style={{fontSize:BASE_FONT-2,color:_sub,marginBottom:2}}>今日の{studyCatName}時間</div>
           <div style={{fontSize:20,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHMS(todayStudyTotal)||"0秒"}</div>
-          <div style={{fontSize:BASE_FONT-3,color:"#3d4560",marginTop:2}}>
+          <div style={{fontSize:BASE_FONT-3,color:`${_sub}88`,marginTop:2}}>
             1セッション最大 2時間
             {running&&<span style={{marginLeft:8,color:elapsed>=3600?"#fb923c":"#6b7a99"}}>残り {fmtHM(Math.max(2*3600-elapsed,0))}</span>}
           </div>
@@ -393,7 +393,7 @@ export default function App() {
       {pomoDone&&<div style={{background:"rgba(52,211,153,0.12)",border:"1px solid #34d399",borderRadius:10,padding:10,textAlign:"center",marginBottom:12,fontSize:BASE_FONT,color:"#34d399",fontWeight:700}}>🎉 {pomoDuration}分完了！計測は継続中</div>}
       {running&&(
         <div style={{textAlign:"center",marginBottom:14}}>
-          <div style={{fontSize:BASE_FONT-1,color:"#6b7a99"}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
+          <div style={{fontSize:BASE_FONT-1,color:_sub}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
         </div>
       )}
       <div style={{display:"flex",justifyContent:"center",gap:10}}>
@@ -405,7 +405,7 @@ export default function App() {
           </>
         }
       </div>
-      {!running&&elapsed>0&&<div style={{textAlign:"center",marginTop:12,color:"#6b7a99",fontSize:BASE_FONT-1}}>経過: <span style={{color:"#e8ecf4",fontWeight:700,fontFamily:"monospace"}}>{fmtTime(elapsed)}</span> ({fmtHMS(elapsed)})</div>}
+      {!running&&elapsed>0&&<div style={{textAlign:"center",marginTop:12,color:_sub,fontSize:BASE_FONT-1}}>経過: <span style={{color:_text,fontWeight:700,fontFamily:"monospace"}}>{fmtTime(elapsed)}</span> ({fmtHMS(elapsed)})</div>}
     </div>
     );
   };
@@ -446,34 +446,34 @@ export default function App() {
       .sort((a,b)=>b[0].localeCompare(a[0]));
 
     return (
-      <div style={{position:"fixed",inset:0,zIndex:200,background:"#0d0f14",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,zIndex:200,background:_bg,display:"flex",flexDirection:"column",overflowY:"auto"}}>
         {/* ヘッダー */}
-        <div style={{position:"sticky",top:0,zIndex:10,background:"#0d0f14",borderBottom:"1px solid #2a2f3d",padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>setDiaryModal(null)} style={{background:"none",border:"none",color:"#6b7a99",fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
+        <div style={{position:"sticky",top:0,zIndex:10,background:_bg,borderBottom:`1px solid ${_border}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setDiaryModal(null)} style={{background:"none",border:"none",color:_sub,fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
           <div style={{flex:1}}>
-            <div style={{fontSize:BASE_FONT+1,fontWeight:800,color:color!=="none"?selColor.color:"#e8ecf4"}}>📔 日記</div>
-            <div style={{fontSize:11,color:"#6b7a99"}}>{editDate}</div>
+            <div style={{fontSize:BASE_FONT+1,fontWeight:800,color:color!=="none"?selColor.color:_text}}>📔 日記</div>
+            <div style={{fontSize:11,color:_sub}}>{editDate}</div>
           </div>
-          <button onClick={()=>setListMode(v=>!v)} style={{background:"rgba(255,255,255,0.05)",border:"1px solid #2a2f3d",borderRadius:8,padding:"6px 12px",color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2}}>{listMode?"✏️ 編集":"📋 一覧"}</button>
+          <button onClick={()=>setListMode(v=>!v)} style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${_border}`,borderRadius:8,padding:"6px 12px",color:_sub,cursor:"pointer",fontSize:BASE_FONT-2}}>{listMode?"✏️ 編集":"📋 一覧"}</button>
           {!listMode&&<button onClick={save} style={{background:saved?"#34d399":"#4f9eff",border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:BASE_FONT,transition:"background 0.3s"}}>{saved?"✓ 保存済":"保存"}</button>}
         </div>
 
         <div style={{padding:"16px",flex:1}}>
           {listMode ? (
             <div>
-              {entries.length===0&&<div style={{textAlign:"center",color:"#3d4560",padding:40}}>日記がまだありません</div>}
+              {entries.length===0&&<div style={{textAlign:"center",color:`${_sub}88`,padding:40}}>日記がまだありません</div>}
               {entries.map(([date,d])=>{
                 const t=typeof d==="object"?d?.text:d;
                 const dc=DIARY_COLORS.find(c=>c.id===(typeof d==="object"?d?.color||"none":"none"));
                 const preview=t?.trim().split("\n")[0]?.slice(0,80)||"";
                 return (
-                  <div key={date} onClick={()=>loadDate(date)} style={{padding:"16px 0",borderBottom:"1px solid #2a2f3d",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:12}}>
+                  <div key={date} onClick={()=>loadDate(date)} style={{padding:"16px 0",borderBottom:`1px solid ${_border}`,cursor:"pointer",display:"flex",alignItems:"flex-start",gap:12}}>
                     <div style={{width:5,borderRadius:2,alignSelf:"stretch",background:dc&&dc.id!=="none"?dc.color:"#2a2f3d",flexShrink:0,minHeight:44}}/>
                     <div style={{flex:1}}>
                       <div style={{fontSize:BASE_FONT-1,fontWeight:700,color:dc?.color||"#94a3b8",marginBottom:5}}>{date}</div>
-                      <div style={{fontSize:BASE_FONT,color:"#e8ecf4",lineHeight:1.6}}>{preview}</div>
+                      <div style={{fontSize:BASE_FONT,color:_text,lineHeight:1.6}}>{preview}</div>
                     </div>
-                    <span style={{color:"#3d4560",fontSize:16,paddingTop:2}}>›</span>
+                    <span style={{color:`${_sub}88`,fontSize:16,paddingTop:2}}>›</span>
                   </div>
                 );
               })}
@@ -486,10 +486,10 @@ export default function App() {
                 style={{
                   width:"100%",boxSizing:"border-box",
                   height:"52vh",
-                  background:"#1e2330",
+                  background:_card,
                   border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,
                   borderRadius:12,padding:16,
-                  color:"#e8ecf4",fontSize:BASE_FONT+2,
+                  color:_text,fontSize:BASE_FONT+2,
                   resize:"none",outline:"none",
                   lineHeight:2,fontFamily:"inherit",display:"block",
                   marginBottom:14,
@@ -497,14 +497,14 @@ export default function App() {
               {/* 色タグ */}
               <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
                 {DIARY_COLORS.map(c=>(
-                  <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:"#2a2f3d"}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
+                  <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:"#2a2f3d"}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:_sub,cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
                 ))}
               </div>
               {/* 日付変更（下部） */}
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:BASE_FONT-2,color:"#6b7a99",flexShrink:0}}>日付：</span>
+                <span style={{fontSize:BASE_FONT-2,color:_sub,flexShrink:0}}>日付：</span>
                 <input type="date" value={editDate.replace(/\//g,"-")} onChange={e=>loadDate(e.target.value.replace(/-/g,"/"))}
-                  style={{flex:1,background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 12px",color:"#e8ecf4",fontSize:BASE_FONT-1,outline:"none",colorScheme:"dark"}}/>
+                  style={{flex:1,background:_card,border:`1px solid ${_border}`,borderRadius:8,padding:"8px 12px",color:_text,fontSize:BASE_FONT-1,outline:"none",colorScheme:"dark"}}/>
               </div>
             </div>
           )}
@@ -540,10 +540,10 @@ export default function App() {
     };
 
     return (
-      <div style={{position:"fixed",inset:0,zIndex:300,background:"#0d0f14",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+      <div style={{position:"fixed",inset:0,zIndex:300,background:_bg,display:"flex",flexDirection:"column",overflowY:"auto"}}>
         {/* ヘッダー */}
-        <div style={{position:"sticky",top:0,zIndex:10,background:"#0d0f14",borderBottom:"1px solid #2a2f3d",padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>setShowSettings(false)} style={{background:"none",border:"none",color:"#6b7a99",fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
+        <div style={{position:"sticky",top:0,zIndex:10,background:_bg,borderBottom:`1px solid ${_border}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setShowSettings(false)} style={{background:"none",border:"none",color:_sub,fontSize:22,cursor:"pointer",padding:"0 6px",lineHeight:1}}>←</button>
           <div style={{fontSize:BASE_FONT+1,fontWeight:800}}>⚙️ 設定</div>
         </div>
 
@@ -551,10 +551,10 @@ export default function App() {
 
           {/* カラーテーマ */}
           <div style={{...S.card}}>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>🎨 テーマ設定</div>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:_sub,marginBottom:12}}>🎨 テーマ設定</div>
 
             {/* 背景モード */}
-            <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:8}}>背景</div>
+            <div style={{fontSize:BASE_FONT-2,color:_sub,marginBottom:8}}>背景</div>
             <div style={{display:"flex",gap:10,marginBottom:16}}>
               {[{id:"dark",label:"🌙 ダーク（黒）"},{id:"light",label:"☀️ ライト（白）"}].map(m=>(
                 <button key={m.id} onClick={()=>setBgModeLocal(m.id)} style={{
@@ -567,7 +567,7 @@ export default function App() {
             </div>
 
             {/* アクセントカラー */}
-            <div style={{fontSize:BASE_FONT-2,color:"#6b7a99",marginBottom:8}}>アクセントカラー</div>
+            <div style={{fontSize:BASE_FONT-2,color:_sub,marginBottom:8}}>アクセントカラー</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
               {ACCENT_COLORS.map(a=>(
                 <button key={a.id} onClick={()=>setAccentLocal(a.id)} style={{
@@ -577,7 +577,7 @@ export default function App() {
                   background:accent===a.id?`${a.color}18`:"transparent",
                 }}>
                   <div style={{width:24,height:24,borderRadius:"50%",background:a.color,boxShadow:accent===a.id?`0 0 10px ${a.color}`:"none"}}/>
-                  <span style={{fontSize:9,color:accent===a.id?a.color:"#6b7a99",fontWeight:700}}>{a.label}</span>
+                  <span style={{fontSize:9,color:accent===a.id?a.color:_sub,fontWeight:700}}>{a.label}</span>
                 </button>
               ))}
             </div>
@@ -592,19 +592,19 @@ export default function App() {
 
           {/* 勉強目標設定 */}
           <div style={{...S.card}}>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>📊 勉強目標</div>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:_sub,marginBottom:12}}>📊 勉強目標</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>目標カテゴリー</span>
-              <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:"#161920",border:"1px solid #2a2f3d",borderRadius:8,padding:"6px 10px",color:"#e8ecf4",fontSize:BASE_FONT-2,outline:"none"}}>
+              <span style={{fontSize:BASE_FONT-2,color:_sub}}>目標カテゴリー</span>
+              <select value={studyCatId} onChange={e=>setStudyCatId(e.target.value)} style={{background:_card2,border:`1px solid ${_border}`,borderRadius:8,padding:"6px 10px",color:_text,fontSize:BASE_FONT-2,outline:"none"}}>
                 {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <span style={{fontSize:BASE_FONT-2,color:"#6b7a99"}}>週間目標時間</span>
+              <span style={{fontSize:BASE_FONT-2,color:_sub}}>週間目標時間</span>
               {editGoal
                 ?<div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <input style={{...S.input,width:60,textAlign:"center"}} type="number" min="1" max="168" value={gInput} onChange={e=>setGInput(e.target.value)}/>
-                  <span style={{color:"#6b7a99",fontSize:BASE_FONT-2}}>時間</span>
+                  <span style={{color:_sub,fontSize:BASE_FONT-2}}>時間</span>
                   <button style={S.btn()} onClick={()=>{setGoalHours(Math.max(1,Number(gInput)));setEditGoal(false);}}>✓</button>
                 </div>
                 :<div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -617,7 +617,7 @@ export default function App() {
 
           {/* Googleカレンダー */}
           <div style={{...S.card}}>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#6b7a99",marginBottom:12}}>📅 Googleカレンダー</div>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:_sub,marginBottom:12}}>📅 Googleカレンダー</div>
             <button onClick={()=>{setShowSettings(false);setShowGoogleCal(true);}} style={{width:"100%",background:"rgba(66,133,244,0.08)",border:"1px solid rgba(66,133,244,0.25)",borderRadius:10,padding:"12px 0",color:"#4285f4",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700}}>
               Googleカレンダーを同期
             </button>
@@ -625,7 +625,7 @@ export default function App() {
 
           {/* バージョン情報 */}
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:"#3d4560"}}>TimeFlow v2.7.0</div>
+            <div style={{fontSize:12,color:`${_sub}88`}}>TimeFlow v2.7.1</div>
           </div>
         </div>
       </div>
@@ -697,7 +697,7 @@ export default function App() {
         {/* 詳細記録リスト */}
         {showList&&(
           <div style={{marginBottom:16}}>
-            {logs.length===0&&<div style={{textAlign:"center",color:"#6b7a99",padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
+            {logs.length===0&&<div style={{textAlign:"center",color:_sub,padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
             {dates.map(date=>{
               const dl=byDate[date], total=dl.reduce((s,l)=>s+l.duration,0);
               const byCat={}; dl.forEach(l=>{ byCat[l.catId]=(byCat[l.catId]||0)+l.duration; });
@@ -710,7 +710,7 @@ export default function App() {
                     </div>
                     <span style={{fontSize:BASE_FONT-1,color:"#34d399",fontWeight:700}}>{fmtHMS(total)}</span>
                   </div>
-                  <div style={{height:4,borderRadius:2,background:"#1e2330",display:"flex",overflow:"hidden",marginBottom:8}}>
+                  <div style={{height:4,borderRadius:2,background:_card,display:"flex",overflow:"hidden",marginBottom:8}}>
                     {Object.entries(byCat).map(([cid,dur])=>{ const cat=categories.find(c=>c.id===cid); return <div key={cid} style={{width:`${(dur/86400)*100}%`,background:cat?.color||"#6b7a99",minWidth:dur>60?2:0}}/>; })}
                   </div>
                   {dl.map(l=>{ const cat=categories.find(c=>c.id===l.catId); return (
@@ -718,14 +718,14 @@ export default function App() {
                       <div style={{width:8,height:8,borderRadius:"50%",background:cat?.color||"#6b7a99",flexShrink:0}}/>
                       <div style={{flex:1}}>
                         <div style={{fontSize:BASE_FONT,fontWeight:700}}>{l.label}</div>
-                        <div style={{fontSize:10,color:"#6b7a99",marginTop:1}}>{l.mode==="pomodoro"?"🍅":"⏱"}{cat&&<span style={{marginLeft:4,color:cat.color}}>#{cat.name}</span>}{l.startHour!=null&&<span style={{marginLeft:6,color:"#3d4560"}}>{Math.floor(l.startHour)}:{pad(Math.round((l.startHour%1)*60))}〜</span>}</div>
+                        <div style={{fontSize:10,color:_sub,marginTop:1}}>{l.mode==="pomodoro"?"🍅":"⏱"}{cat&&<span style={{marginLeft:4,color:cat.color}}>#{cat.name}</span>}{l.startHour!=null&&<span style={{marginLeft:6,color:`${_sub}88`}}>{Math.floor(l.startHour)}:{pad(Math.round((l.startHour%1)*60))}〜</span>}</div>
                       </div>
-                      <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:"#e8ecf4",textAlign:"right"}}>
+                      <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:_text,textAlign:"right"}}>
                         <div style={{fontFamily:"monospace"}}>{fmtTime(l.duration)}</div>
-                        <div style={{fontSize:10,color:"#6b7a99"}}>{fmtHMS(l.duration)}</div>
+                        <div style={{fontSize:10,color:_sub}}>{fmtHMS(l.duration)}</div>
                       </div>
                       <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                        <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#94a3b8",cursor:"pointer",fontSize:10}} onClick={()=>setEditingLog(l)}>編集</button>
+                        <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:_sub,cursor:"pointer",fontSize:10}} onClick={()=>setEditingLog(l)}>編集</button>
                         <button style={{background:"#2a2f3d",border:"none",borderRadius:5,padding:"3px 8px",color:"#f87171",cursor:"pointer",fontSize:10}} onClick={()=>setLogs(p=>p.filter(x=>x.id!==l.id))}>削除</button>
                       </div>
                     </div>
@@ -737,36 +737,36 @@ export default function App() {
         )}
 
         {/* ③ ヒートマップ（一番下） */}
-        <div style={{...S.card,background:"#161920",marginBottom:12}}>
+        <div style={{...S.card,background:_card2,marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div>
-              <div style={{fontSize:11,color:"#6b7a99"}}>📊 {year}年 年間{categories.find(c=>c.id===studyCatId)?.name||"勉強"}時間</div>
+              <div style={{fontSize:11,color:_sub}}>📊 {year}年 年間{categories.find(c=>c.id===studyCatId)?.name||"勉強"}時間</div>
               <div style={{fontSize:28,fontWeight:900,color:"#4f9eff",fontFamily:"monospace"}}>{fmtHM(yearTotal)||"0m"}</div>
-              <div style={{fontSize:11,color:"#6b7a99"}}>{fmtHMS(yearTotal)}</div>
+              <div style={{fontSize:11,color:_sub}}>{fmtHMS(yearTotal)}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"#6b7a99"}}>記録日数</div>
+              <div style={{fontSize:11,color:_sub}}>記録日数</div>
               <div style={{fontSize:22,fontWeight:800,color:"#34d399"}}>{Object.keys(dateMap).filter(d=>d.startsWith(String(year))).length}<span style={{fontSize:13}}>日</span></div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginBottom:8}}>
-            <span style={{fontSize:10,color:"#6b7a99"}}>少</span>
+            <span style={{fontSize:10,color:_sub}}>少</span>
             {["#1e2330","#0d2137","#1a4a7a","#2563a8","#3b82d4","#4f9eff"].map(c=>(
               <div key={c} style={{width:CELL,height:CELL,borderRadius:3,background:c}}/>
             ))}
-            <span style={{fontSize:10,color:"#6b7a99"}}>多</span>
+            <span style={{fontSize:10,color:_sub}}>多</span>
           </div>
           <div style={{overflowX:"auto",paddingBottom:4}}>
             <div style={{display:"flex",gap:0}}>
               <div style={{display:"flex",flexDirection:"column",gap:GAP,marginRight:4,paddingTop:18}}>
                 {DAY_LABELS.map((d,i)=>(
-                  <div key={i} style={{height:CELL,fontSize:9,color:"#3d4560",display:"flex",alignItems:"center"}}>{i%2===0?d:""}</div>
+                  <div key={i} style={{height:CELL,fontSize:9,color:`${_sub}88`,display:"flex",alignItems:"center"}}>{i%2===0?d:""}</div>
                 ))}
               </div>
               <div style={{display:"flex",gap:GAP}}>
                 {weeks.map((week,wi)=>(
                   <div key={wi} style={{display:"flex",flexDirection:"column",gap:GAP}}>
-                    <div style={{height:14,fontSize:9,color:"#6b7a99",whiteSpace:"nowrap"}}>
+                    <div style={{height:14,fontSize:9,color:_sub,whiteSpace:"nowrap"}}>
                       {week[0].getDate()<=7&&week[0].getFullYear()===year?MONTH_LABELS[week[0].getMonth()]:""}
                     </div>
                     {week.map((day,di)=>{
@@ -786,9 +786,9 @@ export default function App() {
             </div>
           </div>
           {tooltip&&(
-            <div style={{marginTop:8,background:"#0d0f14",borderRadius:8,padding:"8px 12px",border:"1px solid #4f9eff"}}>
+            <div style={{marginTop:8,background:_bg,borderRadius:8,padding:"8px 12px",border:"1px solid #4f9eff"}}>
               <div style={{fontSize:12,color:"#4f9eff",fontWeight:700}}>{tooltip.date}</div>
-              <div style={{fontSize:16,fontWeight:800,color:"#e8ecf4"}}>{tooltip.sec?fmtHMS(tooltip.sec):"記録なし"}</div>
+              <div style={{fontSize:16,fontWeight:800,color:_text}}>{tooltip.sec?fmtHMS(tooltip.sec):"記録なし"}</div>
               {(typeof diaries[tooltip.date]==="object"?diaries[tooltip.date]?.text:diaries[tooltip.date])?.trim()&&(
                 <button onClick={()=>setDiaryModal(tooltip.date)} style={{marginTop:4,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"3px 10px",color:"#fbbf24",fontSize:11,cursor:"pointer",fontWeight:700}}>📔 日記を見る</button>
               )}
@@ -803,13 +803,13 @@ export default function App() {
     <div style={S.app}>
       {/* ── Splash Screen ── */}
       {splash&&(
-        <div style={{position:"fixed",inset:0,zIndex:999,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",transition:"opacity 0.5s",opacity:1}}>
+        <div style={{position:"fixed",inset:0,zIndex:999,background:_bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",transition:"opacity 0.5s",opacity:1}}>
           {/* Animated ring */}
           <svg width="100" height="100" viewBox="0 0 100 100" style={{marginBottom:24}}>
             <defs>
               <filter id="sp-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
-            <circle cx="50" cy="50" r="38" fill="none" stroke="#1e2330" strokeWidth="6"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke={_card} strokeWidth="6"/>
             <circle cx="50" cy="50" r="38" fill="none" stroke="#4f9eff" strokeWidth="6" strokeLinecap="round"
               strokeDasharray={2*Math.PI*38} strokeDashoffset={2*Math.PI*38*0.25}
               transform="rotate(-90 50 50)" filter="url(#sp-glow)"
@@ -818,8 +818,8 @@ export default function App() {
             <polyline points="30,52 44,66 70,38" fill="none" stroke="#4f9eff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" filter="url(#sp-glow)"/>
             <style>{`@keyframes spin{from{stroke-dashoffset:${2*Math.PI*38}}to{stroke-dashoffset:${-2*Math.PI*38}}}`}</style>
           </svg>
-          <div style={{fontSize:28,fontWeight:900,color:"#e8ecf4",letterSpacing:"-0.5px",marginBottom:6}}>TimeFlow</div>
-          <div style={{fontSize:13,color:"#6b7a99",letterSpacing:2}}>タスク & 時間管理</div>
+          <div style={{fontSize:28,fontWeight:900,color:_text,letterSpacing:"-0.5px",marginBottom:6}}>TimeFlow</div>
+          <div style={{fontSize:13,color:_sub,letterSpacing:2}}>タスク & 時間管理</div>
         </div>
       )}
       {/* オフライン表示 */}
@@ -860,11 +860,11 @@ export default function App() {
 
       {/* Full-screen timer when running and not on timer tab */}
       {running&&tab!=="timer"&&(
-        <div style={{position:"fixed",inset:0,zIndex:90,background:"#0d0f14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          <div style={{fontSize:11,color:"#6b7a99",marginBottom:8,letterSpacing:2}}>計測中</div>
+        <div style={{position:"fixed",inset:0,zIndex:90,background:_bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <div style={{fontSize:11,color:_sub,marginBottom:8,letterSpacing:2}}>計測中</div>
           <RingTimer elapsed={elapsed} total={mode==="pomodoro"?pomoDuration*60:0} running={true} color={catColor}/>
-          <div style={{marginTop:8,fontSize:BASE_FONT-1,color:"#6b7a99"}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
-          <div style={{marginTop:4,fontSize:BASE_FONT-1,color:"#6b7a99"}}>{fmtHMS(elapsed)}</div>
+          <div style={{marginTop:8,fontSize:BASE_FONT-1,color:_sub}}>カテゴリー: <span style={{color:catColor,fontWeight:700}}>{categories.find(c=>c.id===selectedCat)?.name}</span></div>
+          <div style={{marginTop:4,fontSize:BASE_FONT-1,color:_sub}}>{fmtHMS(elapsed)}</div>
           <div style={{display:"flex",gap:12,marginTop:28}}>
             <button style={{...S.btn("#fb923c"),padding:"14px 28px",fontSize:15,borderRadius:50}} onClick={timerPause}>⏸ 一時停止</button>
             <button style={{...S.btn("#f87171"),padding:"14px 24px",fontSize:15,borderRadius:50}} onClick={()=>{handleStop();setTab("timer");}}>■ 終了・記録</button>
@@ -877,11 +877,11 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.7.0</span></div>
+            <div style={{fontSize:10,color:_sub}}>タスク & 時間管理 <span style={{color:`${_sub}88`,marginLeft:4}}>v2.7.1</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
-            <button onClick={()=>setShowSettings(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>⚙️</button>
+            <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:`${_sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
+            <button onClick={()=>setShowSettings(true)} style={{background:"none",border:"none",color:`${_sub}88`,fontSize:18,cursor:"pointer",padding:2}}>⚙️</button>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:running?"#34d399":"#3d4560",boxShadow:running?"0 0 8px #34d399":"none"}}/>
               <span style={{fontSize:10,color:running?"#34d399":"#3d4560",fontFamily:"monospace"}}>{running?fmtTime(elapsed):"待機中"}</span>
