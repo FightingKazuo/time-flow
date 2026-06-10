@@ -1,7 +1,7 @@
 // ─── 定数・ヘルパー関数 ───────────────────────────────────────────────────────
 
 export const DEFAULT_CATS = [
-  { id:"study",    name:"勉強",   color:"#4f9eff" },
+  { id:"study",    name:"勉強",   color:"#4f8ef7" },
   { id:"work",     name:"仕事",   color:"#a78bfa" },
   { id:"house",    name:"家事",   color:"#34d399" },
   { id:"exercise", name:"運動",   color:"#fb923c" },
@@ -9,7 +9,7 @@ export const DEFAULT_CATS = [
 ];
 
 export const PRESET_COLORS = [
-  "#4f9eff","#a78bfa","#34d399","#fb923c","#f87171",
+  "#4f8ef7","#a78bfa","#34d399","#fb923c","#f87171",
   "#fbbf24","#e879f9","#2dd4bf","#f472b6","#94a3b8",
 ];
 
@@ -60,4 +60,28 @@ export const LS = {
 export const notify = (title, body) => {
   if("Notification" in window && Notification.permission==="granted")
     new Notification(title, {body});
+};
+
+// ─── テーマトークン生成 ────────────────────────────────────────────────────────
+// App.jsx から呼び出し、全コンポーネントに theme オブジェクトとして渡す
+export const ACCENT_MAP = {
+  blue:"#4f8ef7", green:"#34d399", purple:"#a78bfa",
+  orange:"#fb923c", amber:"#fbbf24", pink:"#f472b6",
+};
+
+export const buildTheme = () => {
+  const isDark  = LS.get("tf_bgmode","dark") === "dark";
+  const accent  = ACCENT_MAP[LS.get("tf_accent","blue")] || "#4f8ef7";
+  return {
+    isDark,
+    accent,
+    bg:     isDark ? "#0d0f14" : "#F4F7FB",
+    card:   isDark ? "#1e2330" : "#FFFFFF",
+    card2:  isDark ? "#161920" : "#EEF3FA",
+    border: isDark ? "#2a2f3d" : "#DDE6F5",
+    text:   isDark ? "#e8ecf4" : "#1F2937",
+    sub:    isDark ? "#6b7a99" : "#6B7280",
+    muted:  isDark ? "#3d4560" : "#9CA3AF",
+    shadow: isDark ? "none"    : "0 2px 8px rgba(31,41,55,0.05)",
+  };
 };
