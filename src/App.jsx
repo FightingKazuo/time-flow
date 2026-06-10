@@ -197,7 +197,7 @@ export default function App() {
             </div>
             <div style={{display:"flex",gap:6}}>
               <button onClick={()=>setShowDiaryList(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid #2a2f3d",borderRadius:8,padding:"7px 10px",cursor:"pointer",color:"#6b7a99",fontSize:BASE_FONT-1,fontWeight:600}}>📔 一覧</button>
-              <button onClick={()=>setDiaryModal(todayStr())} style={{background:diaries[todayStr()]?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${diaries[todayStr()]?"#fbbf24":"#2a2f3d"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer",color:diaries[todayStr()]?"#fbbf24":"#6b7a99",fontSize:BASE_FONT-1,fontWeight:600}}>
+              <button onClick={()=>setDiaryModal(todayStr())} style={{background:(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"#fbbf24":"#2a2f3d"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer",color:(typeof diaries[todayStr()]==="object"?diaries[todayStr()]?.text:diaries[todayStr()])?"#fbbf24":"#6b7a99",fontSize:BASE_FONT-1,fontWeight:600}}>
                 {diaries[todayStr()]?"📔 今日":"✏️ 日記"}
               </button>
             </div>
@@ -214,7 +214,9 @@ export default function App() {
           {DAYS_LABEL.map((day,i)=>{
             const wt=weeklyTasks[i]||[], ct=customTasks[i]||[], all=[...wt,...ct];
             const done=all.filter(t=>t.done).length, isToday=i===todayDayIdx();
-            const dayDate=fmtDate(getDayDate(i)), hasDiary=diaries[dayDate]?.trim();
+            const dayDate=fmtDate(getDayDate(i));
+            const _diaryVal=diaries[dayDate];
+            const hasDiary=typeof _diaryVal==="object" ? _diaryVal?.text?.trim() : _diaryVal?.trim();
             return (
               <div key={i} style={{...S.card,padding:10,borderColor:isToday?catColor:"#2a2f3d",background:isToday?`rgba(${hexRgb(catColor)},0.06)`:"#1e2330"}}>
                 {/* Header */}
@@ -238,6 +240,18 @@ export default function App() {
                   {all.length>0&&<span style={{fontSize:9,fontWeight:700,color:done===all.length?"#34d399":"#6b7a99"}}>{done}/{all.length}</span>}
                 </div>
                 {all.length===0&&<div style={{fontSize:10,color:"#3d4560",textAlign:"center",padding:"4px 0"}}>—</div>}
+                {/* カレンダー予定（上部・チェックなし） */}
+                {(()=>{
+                  const d = getDayDate(i);
+                  const ds = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                  return (calendarEvents||[]).filter(e=>e.date===ds).map(e=>(
+                    <div key={e.id} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 6px",marginBottom:3,background:"rgba(66,133,244,0.08)",borderRadius:6,border:"1px solid rgba(66,133,244,0.2)"}}>
+                      <span style={{fontSize:10,flexShrink:0}}>📅</span>
+                      <span style={{fontSize:BASE_FONT-3,color:"#4285f4",fontWeight:600,flex:1,lineHeight:1.3}}>{e.title}</span>
+                      {e.time&&<span style={{fontSize:9,color:"#6b7a99",flexShrink:0}}>{e.time}</span>}
+                    </div>
+                  ));
+                })()}
                 {all.map(t=>(
                   <div key={t.id} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 0",borderBottom:"1px solid #2a2f3d",opacity:t.done?0.4:1}}>
                     <button onClick={()=>setMovePopup({task:t,fromDay:i})} style={{background:"none",border:"none",color:"#3d4560",fontSize:14,flexShrink:0,cursor:"pointer",padding:"1px 2px",lineHeight:1}} title="移動">⇄</button>
@@ -450,7 +464,7 @@ export default function App() {
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:BASE_FONT,fontWeight:800,color:catColor}}>{date}</span>
-                      {diaries[date]?.trim()&&<button onClick={()=>setDiaryModal(date)} style={{background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"2px 7px",color:"#fbbf24",fontSize:10,cursor:"pointer",fontWeight:700}}>📔</button>}
+                      {(typeof diaries[date]==="object"?diaries[date]?.text:diaries[date])?.trim()&&<button onClick={()=>setDiaryModal(date)} style={{background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"2px 7px",color:"#fbbf24",fontSize:10,cursor:"pointer",fontWeight:700}}>📔</button>}
                     </div>
                     <span style={{fontSize:BASE_FONT-1,color:"#34d399",fontWeight:700}}>{fmtHMS(total)}</span>
                   </div>
@@ -550,7 +564,7 @@ export default function App() {
             <div style={{marginTop:8,background:"#0d0f14",borderRadius:8,padding:"8px 12px",border:"1px solid #4f9eff"}}>
               <div style={{fontSize:12,color:"#4f9eff",fontWeight:700}}>{tooltip.date}</div>
               <div style={{fontSize:16,fontWeight:800,color:"#e8ecf4"}}>{tooltip.sec?fmtHMS(tooltip.sec):"記録なし"}</div>
-              {diaries[tooltip.date]?.trim()&&(
+              {(typeof diaries[tooltip.date]==="object"?diaries[tooltip.date]?.text:diaries[tooltip.date])?.trim()&&(
                 <button onClick={()=>setDiaryModal(tooltip.date)} style={{marginTop:4,background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"3px 10px",color:"#fbbf24",fontSize:11,cursor:"pointer",fontWeight:700}}>📔 日記を見る</button>
               )}
             </div>
@@ -638,7 +652,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.5.0</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.5.2</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
