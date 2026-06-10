@@ -442,15 +442,15 @@ export default function App() {
               {entries.map(([date,d])=>{
                 const t=typeof d==="object"?d?.text:d;
                 const dc=DIARY_COLORS.find(c=>c.id===(typeof d==="object"?d?.color||"none":"none"));
-                const preview=t?.trim().split("\n")[0]?.slice(0,60)||"";
+                const preview=t?.trim().split("\n")[0]?.slice(0,80)||"";
                 return (
-                  <div key={date} onClick={()=>loadDate(date)} style={{padding:"14px 0",borderBottom:"1px solid #2a2f3d",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:10}}>
-                    <div style={{width:4,borderRadius:2,alignSelf:"stretch",background:dc&&dc.id!=="none"?dc.color:"#2a2f3d",flexShrink:0,minHeight:40}}/>
+                  <div key={date} onClick={()=>loadDate(date)} style={{padding:"16px 0",borderBottom:"1px solid #2a2f3d",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:12}}>
+                    <div style={{width:5,borderRadius:2,alignSelf:"stretch",background:dc&&dc.id!=="none"?dc.color:"#2a2f3d",flexShrink:0,minHeight:44}}/>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:BASE_FONT-2,fontWeight:700,color:dc?.color||"#94a3b8",marginBottom:4}}>{date}</div>
-                      <div style={{fontSize:BASE_FONT-1,color:"#e8ecf4",lineHeight:1.5}}>{preview}</div>
+                      <div style={{fontSize:BASE_FONT-1,fontWeight:700,color:dc?.color||"#94a3b8",marginBottom:5}}>{date}</div>
+                      <div style={{fontSize:BASE_FONT,color:"#e8ecf4",lineHeight:1.6}}>{preview}</div>
                     </div>
-                    <span style={{color:"#3d4560",fontSize:14,paddingTop:2}}>›</span>
+                    <span style={{color:"#3d4560",fontSize:16,paddingTop:2}}>›</span>
                   </div>
                 );
               })}
@@ -737,7 +737,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.0</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.1</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
