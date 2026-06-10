@@ -457,15 +457,32 @@ export default function App() {
             </div>
           ) : (
             <div>
-              <input type="date" value={editDate.replace(/\//g,"-")} onChange={e=>loadDate(e.target.value.replace(/-/g,"/"))}
-                style={{width:"100%",boxSizing:"border-box",background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"10px 12px",color:"#e8ecf4",fontSize:BASE_FONT,outline:"none",colorScheme:"dark",marginBottom:12}}/>
-              <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+              {/* テキストエリア（メイン・タップで編集） */}
+              <textarea value={text} onChange={e=>setText(e.target.value)}
+                placeholder={`${editDate} の日記を書く...\n\nここをタップして入力`}
+                style={{
+                  width:"100%",boxSizing:"border-box",
+                  height:"52vh",
+                  background:"#1e2330",
+                  border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,
+                  borderRadius:12,padding:16,
+                  color:"#e8ecf4",fontSize:BASE_FONT+2,
+                  resize:"none",outline:"none",
+                  lineHeight:2,fontFamily:"inherit",display:"block",
+                  marginBottom:14,
+                }}/>
+              {/* 色タグ */}
+              <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
                 {DIARY_COLORS.map(c=>(
                   <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:"#2a2f3d"}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:"#6b7a99",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
                 ))}
               </div>
-              <textarea value={text} onChange={e=>setText(e.target.value)} placeholder={`${editDate} の日記を書く...`}
-                style={{width:"100%",boxSizing:"border-box",minHeight:"62vh",background:"#1e2330",border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,borderRadius:12,padding:16,color:"#e8ecf4",fontSize:BASE_FONT+2,resize:"none",outline:"none",lineHeight:2,fontFamily:"inherit",display:"block"}}/>
+              {/* 日付変更（下部） */}
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:BASE_FONT-2,color:"#6b7a99",flexShrink:0}}>日付：</span>
+                <input type="date" value={editDate.replace(/\//g,"-")} onChange={e=>loadDate(e.target.value.replace(/-/g,"/"))}
+                  style={{flex:1,background:"#1e2330",border:"1px solid #2a2f3d",borderRadius:8,padding:"8px 12px",color:"#e8ecf4",fontSize:BASE_FONT-1,outline:"none",colorScheme:"dark"}}/>
+              </div>
             </div>
           )}
         </div>
@@ -737,7 +754,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.1</span></div>
+            <div style={{fontSize:10,color:"#6b7a99"}}>タスク & 時間管理 <span style={{color:"#3d4560",marginLeft:4}}>v2.6.2</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)} style={{background:"none",border:"none",color:"#3d4560",fontSize:18,cursor:"pointer",padding:2}}>💾</button>
