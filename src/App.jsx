@@ -465,8 +465,7 @@ export default function App() {
                 ))}
               </div>
               <textarea value={text} onChange={e=>setText(e.target.value)} placeholder={`${editDate} の日記を書く...`}
-                style={{width:"100%",boxSizing:"border-box",minHeight:"55vh",background:"#1e2330",border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,borderRadius:12,padding:16,color:"#e8ecf4",fontSize:BASE_FONT+1,resize:"none",outline:"none",lineHeight:1.9,fontFamily:"inherit",display:"block"}}
-                autoFocus/>
+                style={{width:"100%",boxSizing:"border-box",minHeight:"62vh",background:"#1e2330",border:`2px solid ${color!=="none"?selColor.color+"66":"#2a2f3d"}`,borderRadius:12,padding:16,color:"#e8ecf4",fontSize:BASE_FONT+2,resize:"none",outline:"none",lineHeight:2,fontFamily:"inherit",display:"block"}}/>
             </div>
           )}
         </div>
