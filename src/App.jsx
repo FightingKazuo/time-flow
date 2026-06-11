@@ -3,7 +3,7 @@ import {
   DEFAULT_CATS, DAYS_LABEL, WEEKLY_DEFAULTS, BASE_FONT,
   pad, fmtTime, fmtHMS, fmtHM, fmtDate, todayStr, hexRgb,
   getDayDate, dayDateStr, todayDayIdx,
-  buildWeeklyTasks, LS, notify, buildTheme, ACCENT_MAP,
+  buildWeeklyTasks, LS, notify, buildTheme, ACCENT_MAP, buildHeatColors,
 } from "./constants";
 import RingTimer          from "./components/RingTimer";
 import TimelineBar        from "./components/TimelineBar";
@@ -174,7 +174,7 @@ export default function App() {
     app:   {minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
     header:{padding:"14px 16px 0",borderBottom:`1px solid ${T.border}`,background:T.bg},
     tabs:  {display:"flex",gap:2,marginTop:10},
-    tab:   a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${catColor}`:"2px solid transparent",background:"transparent",color:a?catColor:T.sub,cursor:"pointer",transition:"all 0.2s"}),
+    tab:   a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${catColor}`:"2px solid transparent",background:a?T.accentBg:"transparent",color:a?catColor:T.sub,cursor:"pointer",transition:"all 0.2s",borderRadius:"8px 8px 0 0"}),
     body:  {flex:1,padding:"12px 12px",overflowY:"auto"},
     card:  {background:T.card,borderRadius:12,border:`1px solid ${T.border}`,padding:12,marginBottom:10,boxShadow:T.shadow},
     input: {background:T.card2,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:BASE_FONT,outline:"none",flex:1},
@@ -193,7 +193,7 @@ export default function App() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
             <div>
               <div style={{fontSize:10,color:T.sub}}>今日の合計</div>
-              <div style={{fontSize:20,fontWeight:800,color:catColor,fontFamily:"monospace"}}>{fmtTime(todayTotal)}</div>
+              <div style={{fontSize:20,fontWeight:800,color:T.accent,fontFamily:"monospace"}}>{fmtTime(todayTotal)}</div>
               <div style={{fontSize:10,color:T.sub}}>{fmtHMS(todayTotal)}</div>
             </div>
             <div style={{display:"flex",gap:6}}>
@@ -537,7 +537,7 @@ export default function App() {
           </div>
 
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.0</div>
+            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.1</div>
           </div>
         </div>
       </div>
@@ -556,13 +556,14 @@ export default function App() {
     const yearTotal = Object.entries(dateMap).filter(([d])=>d.startsWith(String(year))).reduce((s,[,v])=>s+v,0);
 
     const getColor = (sec) => {
-      if(!sec) return T.isDark ? "#1e2330" : "#E8EEF8";
+      const hc = T.heatColors;
+      if(!sec)       return hc[0];
       const m = sec/60;
-      if(m < 20) return T.isDark ? "#0d2137" : "#C7D9F5";
-      if(m < 40) return T.isDark ? "#1a4a7a" : "#93B8EF";
-      if(m < 60) return T.isDark ? "#2563a8" : "#5E96E8";
-      if(m < 90) return T.isDark ? "#3b82d4" : "#3875D4";
-      return T.accent;
+      if(m < 20)     return hc[1];
+      if(m < 40)     return hc[2];
+      if(m < 60)     return hc[3];
+      if(m < 90)     return hc[4];
+      return hc[5];
     };
 
     const jan1  = new Date(year, 0, 1);
@@ -579,9 +580,7 @@ export default function App() {
     const CELL=13, GAP=3;
     const DAY_LABELS   = ["日","月","火","水","木","金","土"];
     const MONTH_LABELS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
-    const HEAT_COLORS  = T.isDark
-      ? ["#1e2330","#0d2137","#1a4a7a","#2563a8","#3b82d4",T.accent]
-      : ["#E8EEF8","#C7D9F5","#93B8EF","#5E96E8","#3875D4",T.accent];
+    const HEAT_COLORS = T.heatColors;
 
     const byDate = {};
     logs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
@@ -769,7 +768,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.0</span></div>
+            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.1</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)}  style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -810,7 +809,7 @@ export default function App() {
       {showDiaryList  && <DiaryListModal      diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)} theme={T}/>}
       {movePopup      && <MoveTaskPopup       task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)} theme={T}/>}
       {showBackup     && <BackupModal
-        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.0"}}
+        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.1"}}
         onRestore={p=>{
           if(p.categories)      setCategories(p.categories);
           if(p.selectedCat)     setSelectedCat(p.selectedCat);
