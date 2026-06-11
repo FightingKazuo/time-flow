@@ -174,7 +174,7 @@ export default function App() {
     app:   {minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
     header:{padding:"14px 16px 0",borderBottom:`1px solid ${T.border}`,background:T.bg},
     tabs:  {display:"flex",gap:2,marginTop:10},
-    tab:   a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${catColor}`:"2px solid transparent",background:a?T.accentBg:"transparent",color:a?catColor:T.sub,cursor:"pointer",transition:"all 0.2s",borderRadius:"8px 8px 0 0"}),
+    tab:   a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${T.accent}`:"2px solid transparent",background:a?T.accentBg:"transparent",color:a?T.accent:T.sub,cursor:"pointer",transition:"all 0.2s",borderRadius:"8px 8px 0 0"}),
     body:  {flex:1,padding:"12px 12px",overflowY:"auto"},
     card:  {background:T.card,borderRadius:12,border:`1px solid ${T.border}`,padding:12,marginBottom:10,boxShadow:T.shadow},
     input: {background:T.card2,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:BASE_FONT,outline:"none",flex:1},
@@ -227,13 +227,13 @@ export default function App() {
             return (
               <div key={i} style={{
                 ...S.card, padding:10,
-                borderColor:isToday?catColor:T.border,
-                background:isToday?`rgba(${hexRgb(catColor)},0.04)`:T.card,
-                boxShadow:isToday?`0 0 0 1.5px ${catColor}22, ${T.shadow}`:T.shadow,
+                borderColor:isToday?T.accent:T.border,
+                background:isToday?`rgba(${hexRgb(T.accent)},0.04)`:T.card,
+                boxShadow:isToday?`0 0 0 1.5px ${T.accent}22, ${T.shadow}`:T.shadow,
               }}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?catColor:T.sub}}>{day}</span>
+                    <span style={{fontSize:BASE_FONT-1,fontWeight:800,color:isToday?T.accent:T.sub}}>{day}</span>
                     <span style={{fontSize:10,color:`${T.sub}88`}}>{dayDateStr(i)}</span>
                     <button onClick={()=>setDiaryModal(dayDate)} style={{
                       background:hasDiary?"rgba(251,191,36,0.15)":T.card2,
@@ -336,7 +336,7 @@ export default function App() {
         {!running&&(
           <>
             <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:12}}>
-              {["timer","pomodoro"].map(m=><button key={m} style={S.btnSm(mode===m,catColor)} onClick={()=>setMode(m)}>{m==="timer"?"⏱ タイマー":"🍅 ポモドーロ"}</button>)}
+              {["timer","pomodoro"].map(m=><button key={m} style={S.btnSm(mode===m,T.accent)} onClick={()=>setMode(m)}>{m==="timer"?"⏱ タイマー":"🍅 ポモドーロ"}</button>)}
             </div>
             <CategoryDial categories={categories} selected={selectedCat} onSelect={setSelectedCat} disabled={false} theme={T}/>
             <div style={{textAlign:"center",marginBottom:10}}>
@@ -537,7 +537,7 @@ export default function App() {
           </div>
 
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.1</div>
+            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.2</div>
           </div>
         </div>
       </div>
@@ -610,7 +610,7 @@ export default function App() {
                 <div key={date} style={{marginBottom:16}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:BASE_FONT,fontWeight:800,color:catColor}}>{date}</span>
+                      <span style={{fontSize:BASE_FONT,fontWeight:800,color:T.accent}}>{date}</span>
                       {getDiaryText(diaries[date])?.trim()&&<button onClick={()=>setDiaryModal(date)} style={{background:"rgba(251,191,36,0.12)",border:"1px solid #fbbf24",borderRadius:6,padding:"2px 7px",color:"#fbbf24",fontSize:10,cursor:"pointer",fontWeight:700}}>📔</button>}
                     </div>
                     <span style={{fontSize:BASE_FONT-1,color:"#34d399",fontWeight:700}}>{fmtHMS(total)}</span>
@@ -768,7 +768,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.1</span></div>
+            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.2</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)}  style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -809,7 +809,7 @@ export default function App() {
       {showDiaryList  && <DiaryListModal      diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)} theme={T}/>}
       {movePopup      && <MoveTaskPopup       task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)} theme={T}/>}
       {showBackup     && <BackupModal
-        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.1"}}
+        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.2"}}
         onRestore={p=>{
           if(p.categories)      setCategories(p.categories);
           if(p.selectedCat)     setSelectedCat(p.selectedCat);
