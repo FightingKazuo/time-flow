@@ -63,25 +63,67 @@ export const notify = (title, body) => {
 };
 
 // ─── テーマトークン生成 ────────────────────────────────────────────────────────
-// App.jsx から呼び出し、全コンポーネントに theme オブジェクトとして渡す
 export const ACCENT_MAP = {
   blue:"#4f8ef7", green:"#34d399", purple:"#a78bfa",
   orange:"#fb923c", amber:"#fbbf24", pink:"#f472b6",
 };
 
+// アクセントカラーのRGB値からライトテーマ用の薄い色を生成
+const accentTint = (hex, opacity) => {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  // 白(255)とアクセントをopacityで混合
+  const mix = (c) => Math.round(255 - (255 - c) * opacity);
+  return `#${mix(r).toString(16).padStart(2,"0")}${mix(g).toString(16).padStart(2,"0")}${mix(b).toString(16).padStart(2,"0")}`;
+};
+
+// ヒートマップ用：アクセントカラーの濃淡5段階を生成
+export const buildHeatColors = (accent, isDark) => {
+  if(isDark) {
+    const r = parseInt(accent.slice(1,3),16);
+    const g = parseInt(accent.slice(3,5),16);
+    const b = parseInt(accent.slice(5,7),16);
+    return [
+      "#1e2330",                                          // 0分：ベース
+      `rgba(${r},${g},${b},0.15)`,                       // 〜20分
+      `rgba(${r},${g},${b},0.35)`,                       // 〜40分
+      `rgba(${r},${g},${b},0.55)`,                       // 〜60分
+      `rgba(${r},${g},${b},0.75)`,                       // 〜90分
+      accent,                                             // 120分以上
+    ];
+  } else {
+    return [
+      accentTint(accent, 0.08),   // 0分：ほぼ白
+      accentTint(accent, 0.25),   // 〜20分
+      accentTint(accent, 0.45),   // 〜40分
+      accentTint(accent, 0.65),   // 〜60分
+      accentTint(accent, 0.82),   // 〜90分
+      accent,                     // 120分以上
+    ];
+  }
+};
+
 export const buildTheme = () => {
   const isDark  = LS.get("tf_bgmode","dark") === "dark";
   const accent  = ACCENT_MAP[LS.get("tf_accent","blue")] || "#4f8ef7";
+  const rgb     = hexRgb(accent);
+
   return {
     isDark,
     accent,
-    bg:     isDark ? "#0d0f14" : "#F4F7FB",
+    // ── 基本トークン ──
+    bg:     isDark ? "#0d0f14" : accentTint(accent, 0.06),  // 背景：アクセント極薄
     card:   isDark ? "#1e2330" : "#FFFFFF",
-    card2:  isDark ? "#161920" : "#EEF3FA",
-    border: isDark ? "#2a2f3d" : "#DDE6F5",
+    card2:  isDark ? "#161920" : accentTint(accent, 0.12),  // カード内：アクセント薄
+    border: isDark ? "#2a2f3d" : accentTint(accent, 0.28),  // ボーダー：アクセント薄め
     text:   isDark ? "#e8ecf4" : "#1F2937",
     sub:    isDark ? "#6b7a99" : "#6B7280",
     muted:  isDark ? "#3d4560" : "#9CA3AF",
-    shadow: isDark ? "none"    : "0 2px 8px rgba(31,41,55,0.05)",
+    shadow: isDark ? "none"    : `0 2px 8px rgba(${rgb},0.08)`,
+    // ── アクセント連動トークン ──
+    accentBg:     isDark ? `rgba(${rgb},0.12)` : accentTint(accent, 0.14), // タブ選択背景など
+    accentBorder: isDark ? `rgba(${rgb},0.3)`  : accentTint(accent, 0.45), // アクセント系ボーダー
+    heatColors: buildHeatColors(accent, isDark),
   };
 };
