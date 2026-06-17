@@ -437,7 +437,7 @@ export default function App() {
             <div>
               <textarea value={text} onChange={e=>setText(e.target.value)}
                 placeholder={`${editDate} の日記を書く...\n\nここをタップして入力`}
-                style={{width:"100%",boxSizing:"border-box",height:"52vh",background:T.card,border:`2px solid ${color!=="none"?selColor.color+"66":T.border}`,borderRadius:12,padding:16,color:T.text,fontSize:BASE_FONT+2,resize:"none",outline:"none",lineHeight:2,fontFamily:"inherit",display:"block",marginBottom:14,boxShadow:T.shadow}}/>
+                style={{width:"100%",boxSizing:"border-box",height:"52vh",background:T.card,border:`2px solid ${color!=="none"?selColor.color+"66":T.border}`,borderRadius:12,padding:16,color:T.text,fontSize:BASE_FONT-1,resize:"none",outline:"none",lineHeight:1.9,fontFamily:"inherit",display:"block",marginBottom:14,boxShadow:T.shadow}}/>
               <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
                 {DIARY_COLORS.map(c=>(
                   <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:T.border}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:T.sub,cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
@@ -532,7 +532,7 @@ export default function App() {
           </div>
 
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.3</div>
+            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.4</div>
           </div>
         </div>
       </div>
@@ -763,7 +763,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.3</span></div>
+            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.4</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setShowBackup(true)}  style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
@@ -804,7 +804,7 @@ export default function App() {
       {showDiaryList  && <DiaryListModal      diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)} theme={T}/>}
       {movePopup      && <MoveTaskPopup       task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)} theme={T}/>}
       {showBackup     && <BackupModal
-        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.3"}}
+        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.4"}}
         onRestore={p=>{
           if(p.categories)      setCategories(p.categories);
           if(p.selectedCat)     setSelectedCat(p.selectedCat);
