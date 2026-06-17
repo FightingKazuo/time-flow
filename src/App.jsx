@@ -532,7 +532,7 @@ export default function App() {
           </div>
 
           <div style={{textAlign:"center",padding:16}}>
-            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.4</div>
+            <div style={{fontSize:12,color:`${T.sub}88`}}>TimeFlow v2.8.5</div>
           </div>
         </div>
       </div>
@@ -763,11 +763,11 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:17,fontWeight:900,letterSpacing:"-0.5px"}}>TimeFlow</div>
-            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.4</span></div>
+            <div style={{fontSize:10,color:T.sub}}>タスク & 時間管理 <span style={{color:`${T.sub}88`,marginLeft:4}}>v2.8.5</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <button onClick={()=>setShowBackup(true)}  style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>
-            <button onClick={()=>setShowSettings(true)} style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>⚙️</button>
+            {!diaryModal && <button onClick={()=>setShowBackup(true)}  style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>💾</button>}
+            {!diaryModal && <button onClick={()=>setShowSettings(true)} style={{background:"none",border:"none",color:`${T.sub}88`,fontSize:18,cursor:"pointer",padding:2}}>⚙️</button>}
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:running?"#34d399":T.muted,boxShadow:running?"0 0 8px #34d399":"none"}}/>
               <span style={{fontSize:10,color:running?"#34d399":T.sub,fontFamily:"monospace"}}>{running?fmtTime(elapsed):"待機中"}</span>
@@ -804,7 +804,7 @@ export default function App() {
       {showDiaryList  && <DiaryListModal      diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)} theme={T}/>}
       {movePopup      && <MoveTaskPopup       task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)} theme={T}/>}
       {showBackup     && <BackupModal
-        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.4"}}
+        data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.5"}}
         onRestore={p=>{
           if(p.categories)      setCategories(p.categories);
           if(p.selectedCat)     setSelectedCat(p.selectedCat);
