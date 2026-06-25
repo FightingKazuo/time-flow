@@ -1,4 +1,4 @@
-import { BASE_FONT, DAYS_LABEL, fmtHM, fmtDate, todayStr, todayDayIdx, getDayDate, getWeekMonday, dayDateStr } from "../constants";
+import { BASE_FONT, DAYS_LABEL, fmtHM, fmtDate, todayStr, todayDayIdx, getDayDate, getWeekMonday, dayDateStr, getDiaryText } from "../constants";
 
 export default function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries, goalHours, onSelectDay, selectedDay, studyCatId, theme }) {
   const t      = theme || {};
@@ -25,7 +25,6 @@ export default function WeeklyProgress({ weeklyTasks, customTasks, logs, diaries
   const goalReached = studyWeekTotal >= goalHours*3600;
   const todayTotal  = logs.filter(l=>l.date===todayStr()).reduce((s,l)=>s+l.duration,0);
 
-  const getDiaryText = d => typeof d==="object" ? d?.text : d;
   const mon = getWeekMonday();
   let diaryCount = 0;
   for(let i=0;i<7;i++){
