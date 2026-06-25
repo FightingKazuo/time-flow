@@ -127,3 +127,7 @@ export const buildTheme = () => {
     heatColors: buildHeatColors(accent, isDark),
   };
 };
+
+// ─── 日記ヘルパー ──────────────────────────────────────────────────────────────
+export const getDiaryText  = d => typeof d === "object" ? d?.text  : d;
+export const getDiaryColor = d => typeof d === "object" ? (d?.color || "none") : "none";
