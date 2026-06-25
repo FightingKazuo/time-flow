@@ -1,5 +1,5 @@
 // ─── バージョンはApp.jsxのAPP_VERSIONと合わせて更新する ──────────────────────
-const CACHE_NAME = 'timeflow-v2.9.0';
+const CACHE_NAME = 'timeflow-v2.9.1';
 
 const ASSETS = [
   '/',
@@ -9,7 +9,6 @@ const ASSETS = [
   '/manifest.json',
 ];
 
-// インストール：新しいキャッシュを作成
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS).catch(() => {}))
@@ -17,7 +16,6 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// アクティベート：古いキャッシュを全削除
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -27,7 +25,6 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// フェッチ：HTMLは常にネットワーク優先（最新を保証）
 self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate') {
     e.respondWith(
