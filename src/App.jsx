@@ -21,6 +21,7 @@ import MoveTaskPopup      from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal   from "./components/modals/MonthlyTaskModal";
 import GoogleCalendarModal from "./components/modals/GoogleCalendarModal";
 import { DIARY_COLORS }   from "./components/modals/DiaryModal";
+import DiaryAnalysisModal from "./components/modals/DiaryAnalysisModal";
 import { useTimer }       from "./hooks/useTimer";
 import { useWeekReset }   from "./hooks/useWeekReset";
 
@@ -78,7 +79,8 @@ export default function App() {
   const [editingLog,   setEditingLog]   = useState(null);
   const [diaries,      setDiaries]      = useState(()=>LS.get("tf_diaries", {}));
   const [diaryModal,   setDiaryModal]   = useState(null);
-  const [showDiaryList,setShowDiaryList]= useState(false);
+  const [showDiaryList,    setShowDiaryList]    = useState(false);
+  const [showDiaryAnalysis, setShowDiaryAnalysis] = useState(false);
   const [goalHours,    setGoalHours]    = useState(()=>LS.get("tf_goalHours", 10));
   const [logSelectedDay, setLogSelectedDay] = useState(todayDayIdx());
   const [autoStopInfo,   setAutoStopInfo]   = useState(null);
@@ -592,6 +594,9 @@ export default function App() {
           <button onClick={()=>setShowDiaryList(true)} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #fbbf2440",background:"rgba(251,191,36,0.08)",color:"#fbbf24",fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2,boxShadow:T.shadow}}>
             📔
           </button>
+          <button onClick={()=>setShowDiaryAnalysis(true)} style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${T.accent}44`,background:`rgba(79,142,247,0.08)`,color:T.accent,fontWeight:700,cursor:"pointer",fontSize:BASE_FONT-2,boxShadow:T.shadow}}>
+            ✨
+          </button>
         </div>
 
         {showList&&(
@@ -802,6 +807,7 @@ export default function App() {
         setEditingLog(null);
       }} onClose={()=>setEditingLog(null)} theme={T}/>}
       {showDiaryList  && <DiaryListModal      diaries={diaries} onOpen={d=>{setShowDiaryList(false);setDiaryModal(d);}} onClose={()=>setShowDiaryList(false)} theme={T}/>}
+      {showDiaryAnalysis && <DiaryAnalysisModal diaries={diaries} logs={logs} studyCatId={studyCatId} onClose={()=>setShowDiaryAnalysis(false)} theme={T}/>}
       {movePopup      && <MoveTaskPopup       task={movePopup.task} fromDay={movePopup.fromDay} onMove={moveTask} onClose={()=>setMovePopup(null)} theme={T}/>}
       {showBackup     && <BackupModal
         data={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString(),appVersion:"v2.8.5"}}
