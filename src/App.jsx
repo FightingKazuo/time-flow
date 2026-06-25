@@ -26,7 +26,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.9.0";
+export const APP_VERSION = "v2.9.1";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -52,7 +52,7 @@ function OfflineBanner() {
 }
 
 // ─── Task Tab ─────────────────────────────────────────────────────────────────
-function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents, longTermTasks,
+function TaskTab({ T, S, categories, weeklyTasks, customTasks, logs, diaries, calendarEvents, longTermTasks,
   addingDay, setAddingDay, movePopup, setMovePopup,
   setDiaryModal, setShowDiaryList, setShowWeekHistory, setShowWeeklyMgr,
   setShowMonthly, setShowLongTerm, toggleTask, setCustomTasks, setLongTermTasks }) {
@@ -63,7 +63,7 @@ function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents
   return (
     <div>
       <div style={{...S.card, background:T.card2, borderColor:T.isDark?"rgba(79,142,247,0.2)":T.border}}>
-        <TimelineBar logs={logs} categories={[]} date={todayStr()} theme={T}/>
+        <TimelineBar logs={logs} categories={categories} date={todayStr()} theme={T}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
           <div>
             <div style={{fontSize:10,color:T.sub}}>今日の合計</div>
@@ -726,7 +726,7 @@ export default function App() {
       </div>
 
       <div style={S.body}>
-        {tab==="task"  && <TaskTab T={T} S={S} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
+        {tab==="task"  && <TaskTab T={T} S={S} categories={categories} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
         {tab==="timer" && <TimerTab T={T} S={S} categories={categories} selectedCat={selectedCat} setSelectedCat={setSelectedCat} studyCatId={studyCatId} mode={mode} setMode={setMode} pomoDuration={pomoDuration} setPomoDuration={setPomoDuration} elapsed={elapsed} running={running} timerStart={timerStart} timerPause={timerPause} handleStop={handleStop} setShowCatMgr={setShowCatMgr} setTab={setTab} catColor={catColor} todayStudyTotal={todayStudyTotal} pomoDone={pomoDone}/>}
         {tab==="log"   && <LogTab T={T} S={S} logs={logs} diaries={diaries} categories={categories} studyCatId={studyCatId} weeklyTasks={weeklyTasks} customTasks={customTasks} goalHours={goalHours} logSelectedDay={logSelectedDay} setLogSelectedDay={setLogSelectedDay} setDiaryModal={setDiaryModal} setEditingLog={setEditingLog} setLogs={setLogs} setShowDiaryList={setShowDiaryList} setShowDiaryAnalysis={setShowDiaryAnalysis}/>}
       </div>
