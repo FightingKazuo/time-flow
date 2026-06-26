@@ -26,7 +26,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.9.1";
+export const APP_VERSION = "v2.9.2";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -52,7 +52,7 @@ function OfflineBanner() {
 }
 
 // ─── Task Tab ─────────────────────────────────────────────────────────────────
-function TaskTab({ T, S, categories, weeklyTasks, customTasks, logs, diaries, calendarEvents, longTermTasks,
+function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents, longTermTasks,
   addingDay, setAddingDay, movePopup, setMovePopup,
   setDiaryModal, setShowDiaryList, setShowWeekHistory, setShowWeeklyMgr,
   setShowMonthly, setShowLongTerm, toggleTask, setCustomTasks, setLongTermTasks }) {
@@ -63,7 +63,7 @@ function TaskTab({ T, S, categories, weeklyTasks, customTasks, logs, diaries, ca
   return (
     <div>
       <div style={{...S.card, background:T.card2, borderColor:T.isDark?"rgba(79,142,247,0.2)":T.border}}>
-        <TimelineBar logs={logs} categories={categories} date={todayStr()} theme={T}/>
+        <TimelineBar logs={logs} categories={[]} date={todayStr()} theme={T}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
           <div>
             <div style={{fontSize:10,color:T.sub}}>今日の合計</div>
@@ -290,7 +290,8 @@ function DiaryScreen({ T, S, diaryModal, diaries, saveDiary, setDiaryModal }) {
           <div>
             <textarea value={text} onChange={e=>setText(e.target.value)}
               placeholder={`${editDate} の日記を書く...\n\nここをタップして入力`}
-              style={{width:"100%",boxSizing:"border-box",height:"52vh",background:T.card,border:`2px solid ${color!=="none"?selColor.color+"66":T.border}`,borderRadius:12,padding:16,color:T.text,fontSize:BASE_FONT-1,resize:"none",outline:"none",lineHeight:1.9,fontFamily:"inherit",display:"block",marginBottom:14,boxShadow:T.shadow}}/>
+              style={{width:"100%",boxSizing:"border-box",height:"52vh",background:T.card,border:`2px solid ${color!=="none"?selColor.color+"66":T.border}`,borderRadius:12,padding:16,color:T.text,fontSize:BASE_FONT-1,resize:"none",outline:"none",lineHeight:1.9,fontFamily:"inherit",display:"block",marginBottom:4,boxShadow:T.shadow}}/>
+              <div style={{textAlign:"right",fontSize:10,color:T.sub,marginBottom:10}}>{text.length}文字 / {text.split("\n").length}行</div>
             <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
               {DIARY_COLORS.map(c => (
                 <button key={c.id} onClick={()=>setColor(c.id)} style={{padding:"6px 12px",borderRadius:20,border:`2px solid ${color===c.id?c.color:T.border}`,background:color===c.id?`${c.color}22`:"transparent",color:color===c.id?c.color:T.sub,cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700}}>{c.label}</button>
@@ -389,8 +390,9 @@ function LogTab({ T, S, logs, diaries, categories, studyCatId, weeklyTasks, cust
   goalHours, logSelectedDay, setLogSelectedDay, setDiaryModal, setEditingLog, setLogs,
   setShowDiaryList, setShowDiaryAnalysis }) {
 
-  const [showList, setShowList] = useState(false);
-  const [tooltip,  setTooltip]  = useState(null);
+  const [showList,   setShowList]   = useState(false);
+  const [tooltip,    setTooltip]    = useState(null);
+  const [filterCat,  setFilterCat]  = useState("all"); // カテゴリーフィルター
   const now  = new Date();
   const year = now.getFullYear();
 
@@ -425,8 +427,9 @@ function LogTab({ T, S, logs, diaries, categories, studyCatId, weeklyTasks, cust
   const MONTH_LABELS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
   const HEAT_COLORS  = T.heatColors;
 
+  const filteredLogs = filterCat === "all" ? logs : logs.filter(l => l.catId === filterCat);
   const byDate = {};
-  logs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
+  filteredLogs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
   const dates = Object.keys(byDate).sort().reverse();
 
   return (
@@ -443,7 +446,17 @@ function LogTab({ T, S, logs, diaries, categories, studyCatId, weeklyTasks, cust
 
       {showList && (
         <div style={{marginBottom:16}}>
-          {logs.length===0 && <div style={{textAlign:"center",color:T.sub,padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
+          {/* カテゴリーフィルター */}
+          <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:2,scrollbarWidth:"none"}}>
+            <button onClick={()=>setFilterCat("all")} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,border:`1px solid ${filterCat==="all"?T.accent:T.border}`,background:filterCat==="all"?`rgba(79,142,247,0.12)`:"transparent",color:filterCat==="all"?T.accent:T.sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700}}>すべて</button>
+            {categories.map(cat=>(
+              <button key={cat.id} onClick={()=>setFilterCat(cat.id)} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,border:`1px solid ${filterCat===cat.id?cat.color:T.border}`,background:filterCat===cat.id?`${cat.color}22`:"transparent",color:filterCat===cat.id?cat.color:T.sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:cat.color,flexShrink:0}}/>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          {filteredLogs.length===0 && <div style={{textAlign:"center",color:T.sub,padding:40,fontSize:BASE_FONT}}>記録がありません。</div>}
           {dates.map(date => {
             const dl=byDate[date], total=dl.reduce((s,l)=>s+l.duration,0);
             const byCat={};
@@ -592,6 +605,17 @@ export default function App() {
 
   useWeekReset({ setWeeklyTasks, setCustomTasks, setLongTermTasks, setWeekHistory, weeklyTemplates });
 
+  // 週間目標達成通知
+  const prevGoalRef = typeof window !== "undefined" ? (window.__prevGoalReached ?? false) : false;
+  const studyWeekTotal = logs.filter(l => l.catId === studyCatId).reduce((s,l) => s+l.duration, 0);
+  const goalReached    = studyWeekTotal >= goalHours * 3600;
+  useEffect(() => {
+    if(goalReached && !window.__prevGoalReached) {
+      notify("🎯 週間目標達成！", `今週の勉強時間が目標 ${goalHours}h を達成しました！`);
+    }
+    window.__prevGoalReached = goalReached;
+  }, [goalReached]);
+
   useEffect(()=>LS.set("tf_categories",   categories),   [categories]);
   useEffect(()=>LS.set("tf_selectedCat",  selectedCat),  [selectedCat]);
   useEffect(()=>LS.set("tf_weeklyTasks",  weeklyTasks),  [weeklyTasks]);
@@ -668,6 +692,7 @@ export default function App() {
               transform="rotate(-90 50 50)" filter="url(#sp-glow)" style={{animation:"spin 1.4s linear infinite"}}/>
             <polyline points="30,52 44,66 70,38" fill="none" stroke={T.accent} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" filter="url(#sp-glow)"/>
             <style>{`@keyframes spin{from{stroke-dashoffset:${2*Math.PI*38}}to{stroke-dashoffset:${-2*Math.PI*38}}}`}</style>
+            <style>{`@keyframes checkPop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}`}</style>
           </svg>
           <div style={{fontSize:28,fontWeight:900,color:T.text,letterSpacing:"-0.5px",marginBottom:6}}>TimeFlow</div>
           <div style={{fontSize:13,color:T.sub,letterSpacing:2}}>タスク & 時間管理</div>
@@ -726,7 +751,7 @@ export default function App() {
       </div>
 
       <div style={S.body}>
-        {tab==="task"  && <TaskTab T={T} S={S} categories={categories} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
+        {tab==="task"  && <TaskTab T={T} S={S} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
         {tab==="timer" && <TimerTab T={T} S={S} categories={categories} selectedCat={selectedCat} setSelectedCat={setSelectedCat} studyCatId={studyCatId} mode={mode} setMode={setMode} pomoDuration={pomoDuration} setPomoDuration={setPomoDuration} elapsed={elapsed} running={running} timerStart={timerStart} timerPause={timerPause} handleStop={handleStop} setShowCatMgr={setShowCatMgr} setTab={setTab} catColor={catColor} todayStudyTotal={todayStudyTotal} pomoDone={pomoDone}/>}
         {tab==="log"   && <LogTab T={T} S={S} logs={logs} diaries={diaries} categories={categories} studyCatId={studyCatId} weeklyTasks={weeklyTasks} customTasks={customTasks} goalHours={goalHours} logSelectedDay={logSelectedDay} setLogSelectedDay={setLogSelectedDay} setDiaryModal={setDiaryModal} setEditingLog={setEditingLog} setLogs={setLogs} setShowDiaryList={setShowDiaryList} setShowDiaryAnalysis={setShowDiaryAnalysis}/>}
       </div>
