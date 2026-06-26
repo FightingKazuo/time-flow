@@ -13,6 +13,7 @@ export default function LongTermModal({ tasks, onSave, onClose, theme }) {
 
   const [items,        setItems]        = useState(tasks.map(t=>({...t})));
   const [showDone,     setShowDone]     = useState(false);
+  const [sortBy,       setSortBy]       = useState("added"); // added | deadline | group
   const [newDeadline,  setNewDeadline]  = useState("");
   const [newGroup,     setNewGroup]     = useState("default");
   const [editingGroup, setEditingGroup] = useState(false);
@@ -39,7 +40,17 @@ export default function LongTermModal({ tasks, onSave, onClose, theme }) {
 
   const updateItem = (id, patch) => setItems(p=>p.map(t=>t.id===id?{...t,...patch}:t));
 
-  const active = items.filter(t=>!t.done && (selectedGroup==="all"||t.group===selectedGroup));
+  const sortItems = (arr) => {
+    if(sortBy === "deadline") return [...arr].sort((a,b)=>{
+      if(!a.deadline && !b.deadline) return 0;
+      if(!a.deadline) return 1;
+      if(!b.deadline) return -1;
+      return a.deadline.localeCompare(b.deadline);
+    });
+    if(sortBy === "group") return [...arr].sort((a,b)=>(a.group||"").localeCompare(b.group||""));
+    return arr; // added order
+  };
+  const active = sortItems(items.filter(t=>!t.done && (selectedGroup==="all"||t.group===selectedGroup)));
   const done   = items.filter(t=>t.done  && (selectedGroup==="all"||t.group===selectedGroup));
 
   const isOverdue = t => t.deadline && !t.done && new Date(t.deadline) < new Date();
@@ -140,6 +151,12 @@ export default function LongTermModal({ tasks, onSave, onClose, theme }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:BASE_FONT+2,fontWeight:800,color:text}}>📌 長期タスク</div>
           <button style={bS(accent)} onClick={()=>{onSave(items);onClose();}}>保存</button>
+        </div>
+        {/* ソートボタン */}
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
+          {[{id:"added",label:"追加順"},{id:"deadline",label:"期限順"},{id:"group",label:"グループ順"}].map(s=>(
+            <button key={s.id} onClick={()=>setSortBy(s.id)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${sortBy===s.id?accent:border}`,background:sortBy===s.id?`rgba(79,142,247,0.15)`:"transparent",color:sortBy===s.id?accent:sub,cursor:"pointer",fontSize:BASE_FONT-4,fontWeight:700}}>{s.label}</button>
+          ))}
         </div>
 
         {/* グループタブ */}
