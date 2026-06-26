@@ -123,7 +123,12 @@ export default function GoogleCalendarModal({ onImport, onClose, theme }) {
     const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
   });
   const doImport = () => {
-    const toImport = events.filter(e=>selected.has(e.id)).map(e=>({...e,id:`gc_${e.id}_${Date.now()}`}));
+    // gcIdで重複チェックしてからインポート
+    const existingGcIds = new Set((window.__tfCalEvents||[]).map(e=>e.gcId).filter(Boolean));
+    const toImport = events
+      .filter(e=>selected.has(e.id) && !existingGcIds.has(e.id))
+      .map(e=>({...e, id:`gc_${e.id}`}));
+    if(toImport.length === 0) { onClose(); return; }
     onImport(toImport); onClose();
   };
 
