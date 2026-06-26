@@ -26,7 +26,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.9.2";
+export const APP_VERSION = "v2.9.3";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -149,6 +149,16 @@ function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents
       <button onClick={()=>setShowMonthly(true)} style={{width:"100%",background:"rgba(167,139,250,0.06)",border:`1px solid rgba(167,139,250,${T.isDark?"0.2":"0.3"})`,borderRadius:10,padding:"10px 0",color:"#a78bfa",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700,marginTop:8,boxShadow:T.shadow}}>
         🗓 マンスリータスク
       </button>
+      {(()=>{
+        const seen = new Set();
+        const dups = (calendarEvents||[]).filter(e=>{ const k=e.gcId||e.id; if(seen.has(k)) return true; seen.add(k); return false; });
+        if(!dups.length) return null;
+        return (
+          <button onClick={()=>{ const s=new Set(); setCalendarEvents((calendarEvents||[]).filter(e=>{ const k=e.gcId||e.id; if(s.has(k)) return false; s.add(k); return true; })); }} style={{width:"100%",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:10,padding:"10px 0",color:"#f87171",cursor:"pointer",fontSize:BASE_FONT-2,fontWeight:700,marginTop:8,boxShadow:T.shadow}}>
+            🗑 カレンダー重複を削除（{dups.length}件）
+          </button>
+        );
+      })()}
 
       <div style={{marginTop:16,borderTop:`1px dashed ${T.border}`,paddingTop:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -574,7 +584,17 @@ export default function App() {
   const [showLongTerm,    setShowLongTerm]    = useState(false);
   const [monthlyTasks,    setMonthlyTasks]    = useState(()=>LS.get("tf_monthlyTasks", []));
   const [showMonthly,     setShowMonthly]     = useState(false);
-  const [calendarEvents,  setCalendarEvents]  = useState(()=>LS.get("tf_calEvents", []));
+  const [calendarEvents,  setCalendarEvents]  = useState(()=>{
+    const evts = LS.get("tf_calEvents", []);
+    // 起動時に gcId の重複を自動排除
+    const seen = new Set();
+    return evts.filter(e => {
+      const key = e.gcId || e.id;
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  });
   const [showGoogleCal,   setShowGoogleCal]   = useState(false);
   const [splash,          setSplash]          = useState(true);
   const [weekHistory,     setWeekHistory]     = useState(()=>LS.get("tf_weekHistory", []));
@@ -624,7 +644,10 @@ export default function App() {
   useEffect(()=>LS.set("tf_diaries",      diaries),      [diaries]);
   useEffect(()=>LS.set("tf_longTerm",     longTermTasks),[longTermTasks]);
   useEffect(()=>LS.set("tf_monthlyTasks", monthlyTasks), [monthlyTasks]);
-  useEffect(()=>LS.set("tf_calEvents",    calendarEvents),[calendarEvents]);
+  useEffect(()=>{
+    LS.set("tf_calEvents", calendarEvents);
+    window.__tfCalEvents = calendarEvents; // GoogleCalendarModalの重複チェック用
+  },[calendarEvents]);
   useEffect(()=>LS.set("tf_studyCatId",   studyCatId),   [studyCatId]);
   useEffect(()=>LS.set("tf_weekHistory",  weekHistory),  [weekHistory]);
   useEffect(()=>{ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); },[]);
@@ -751,7 +774,7 @@ export default function App() {
       </div>
 
       <div style={S.body}>
-        {tab==="task"  && <TaskTab T={T} S={S} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
+        {tab==="task"  && <TaskTab T={T} S={S} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} setCalendarEvents={setCalendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
         {tab==="timer" && <TimerTab T={T} S={S} categories={categories} selectedCat={selectedCat} setSelectedCat={setSelectedCat} studyCatId={studyCatId} mode={mode} setMode={setMode} pomoDuration={pomoDuration} setPomoDuration={setPomoDuration} elapsed={elapsed} running={running} timerStart={timerStart} timerPause={timerPause} handleStop={handleStop} setShowCatMgr={setShowCatMgr} setTab={setTab} catColor={catColor} todayStudyTotal={todayStudyTotal} pomoDone={pomoDone}/>}
         {tab==="log"   && <LogTab T={T} S={S} logs={logs} diaries={diaries} categories={categories} studyCatId={studyCatId} weeklyTasks={weeklyTasks} customTasks={customTasks} goalHours={goalHours} logSelectedDay={logSelectedDay} setLogSelectedDay={setLogSelectedDay} setDiaryModal={setDiaryModal} setEditingLog={setEditingLog} setLogs={setLogs} setShowDiaryList={setShowDiaryList} setShowDiaryAnalysis={setShowDiaryAnalysis}/>}
       </div>
