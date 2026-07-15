@@ -26,7 +26,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.9.3";
+export const APP_VERSION = "v2.9.4";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -35,18 +35,31 @@ document.body.style.color      = T.text;
 
 // ─── Offline Banner ───────────────────────────────────────────────────────────
 function OfflineBanner() {
-  const [offline, setOffline] = useState(!navigator.onLine);
+  const [offline,  setOffline]  = useState(!navigator.onLine);
+  const [visible,  setVisible]  = useState(true);
   useEffect(() => {
-    const on  = () => setOffline(false);
-    const off = () => setOffline(true);
+    const on  = () => { setOffline(false); setVisible(true); };
+    const off = () => { setOffline(true);  setVisible(true); };
     window.addEventListener("online",  on);
     window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
-  if (!offline) return null;
+  if (!offline || !visible) return null;
   return (
-    <div style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,background:"#fb923c",color:"#fff",textAlign:"center",padding:"8px",fontSize:13,fontWeight:700}}>
-      📡 オフライン中 — データはローカルに保存されています
+    <div style={{
+      position:"fixed", bottom:80, left:12, right:12, zIndex:1000,
+      background:"rgba(30,20,0,0.92)", backdropFilter:"blur(8px)",
+      border:"1px solid #fb923c66",
+      borderRadius:12, padding:"10px 14px",
+      display:"flex", alignItems:"center", gap:10,
+      boxShadow:"0 4px 20px rgba(0,0,0,0.4)",
+    }}>
+      <span style={{fontSize:18,flexShrink:0}}>📡</span>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#fb923c"}}>オフライン中</div>
+        <div style={{fontSize:11,color:"rgba(255,200,100,0.8)",marginTop:1}}>データはローカルに保存されています</div>
+      </div>
+      <button onClick={()=>setVisible(false)} style={{background:"none",border:"none",color:"#fb923c88",fontSize:18,cursor:"pointer",padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>
     </div>
   );
 }
