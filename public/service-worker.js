@@ -1,5 +1,5 @@
 // ─── バージョンはApp.jsxのAPP_VERSIONと合わせて更新する ──────────────────────
-const CACHE_NAME = 'timeflow-v2.9.5';
+const CACHE_NAME = 'timeflow-v2.10.0';
 
 const ASSETS = [
   '/',
