@@ -77,10 +77,14 @@ export default function BackupModal({ data, onRestore, onClose, theme }) {
         {mode==="export"&&(
           <>
             <button style={bS(accent)} onClick={()=>{
-              const a=document.createElement("a");
-              a.href=URL.createObjectURL(new Blob([jsonStr],{type:"application/json"}));
-              a.download=`timeflow_${new Date().toISOString().slice(0,10)}.json`;
-              a.click();
+              // iOS対応: data: URLを使用（createObjectURLはiOSでホワイトアウトを引き起こす）
+              const dataUrl = "data:application/json;charset=utf-8," + encodeURIComponent(jsonStr);
+              const dlLink = document.createElement("a");
+              dlLink.href = dataUrl;
+              dlLink.download = `timeflow_${new Date().toISOString().slice(0,10)}.json`;
+              document.body.appendChild(dlLink);
+              dlLink.click();
+              setTimeout(() => document.body.removeChild(dlLink), 100);
               setMsg({ok:true,text:"ファイルを保存しました！"});
             }}>📄 JSONファイルとして保存</button>
             <button style={bS(card2, sub)} onClick={()=>
