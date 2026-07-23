@@ -21,12 +21,13 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup         from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal      from "./components/modals/MonthlyTaskModal";
 import GoogleCalendarModal   from "./components/modals/GoogleCalendarModal";
+import GoogleDriveSync       from "./components/modals/GoogleDriveSync";
 import { DIARY_COLORS }      from "./components/modals/DiaryModal";
 import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.9.5";
+export const APP_VERSION = "v2.10.0";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -333,7 +334,7 @@ function DiaryScreen({ T, S, diaryModal, diaries, saveDiary, setDiaryModal }) {
 }
 
 // ─── Settings Screen ──────────────────────────────────────────────────────────
-function SettingsScreen({ T, S, goalHours, setGoalHours, studyCatId, setStudyCatId, categories, setShowSettings, setShowGoogleCal }) {
+function SettingsScreen({ T, S, goalHours, setGoalHours, studyCatId, setStudyCatId, categories, setShowSettings, setShowGoogleCal, setShowDriveSync }) {
   const [editGoal, setEditGoal] = useState(false);
   const [gInput,   setGInput]   = useState(String(goalHours));
   const ACCENT_COLORS = Object.entries(ACCENT_MAP).map(([id,color])=>({
@@ -398,6 +399,13 @@ function SettingsScreen({ T, S, goalHours, setGoalHours, studyCatId, setStudyCat
           <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:T.sub,marginBottom:12}}>📅 Googleカレンダー</div>
           <button onClick={()=>{setShowSettings(false);setShowGoogleCal(true);}} style={{width:"100%",background:"rgba(66,133,244,0.08)",border:"1px solid rgba(66,133,244,0.25)",borderRadius:10,padding:"12px 0",color:"#4285f4",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700}}>
             Googleカレンダーを同期
+          </button>
+        </div>
+        <div style={{...S.card}}>
+          <div style={{fontSize:BASE_FONT-1,fontWeight:800,color:T.sub,marginBottom:4}}>☁️ Googleドライブ同期</div>
+          <div style={{fontSize:11,color:T.sub,marginBottom:12}}>PC・iPhone間でデータを共有</div>
+          <button onClick={()=>{setShowSettings(false);setShowDriveSync(true);}} style={{width:"100%",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.25)",borderRadius:10,padding:"12px 0",color:"#34d399",cursor:"pointer",fontSize:BASE_FONT-1,fontWeight:700}}>
+            ☁️ ドライブで同期する
           </button>
         </div>
         <div style={{textAlign:"center",padding:16}}>
@@ -609,6 +617,7 @@ export default function App() {
     });
   });
   const [showGoogleCal,   setShowGoogleCal]   = useState(false);
+  const [showDriveSync,   setShowDriveSync]   = useState(false);
   const [splash,          setSplash]          = useState(true);
   const [weekHistory,     setWeekHistory]     = useState(()=>LS.get("tf_weekHistory", []));
   const [showWeekHistory, setShowWeekHistory] = useState(false);
@@ -792,9 +801,27 @@ export default function App() {
         {tab==="log"   && <LogTab T={T} S={S} logs={logs} diaries={diaries} categories={categories} studyCatId={studyCatId} weeklyTasks={weeklyTasks} customTasks={customTasks} goalHours={goalHours} logSelectedDay={logSelectedDay} setLogSelectedDay={setLogSelectedDay} setDiaryModal={setDiaryModal} setEditingLog={setEditingLog} setLogs={setLogs} setShowDiaryList={setShowDiaryList} setShowDiaryAnalysis={setShowDiaryAnalysis}/>}
       </div>
 
-      {showSettings    && <SettingsScreen T={T} S={S} goalHours={goalHours} setGoalHours={setGoalHours} studyCatId={studyCatId} setStudyCatId={setStudyCatId} categories={categories} setShowSettings={setShowSettings} setShowGoogleCal={setShowGoogleCal}/>}
+      {showSettings    && <SettingsScreen T={T} S={S} goalHours={goalHours} setGoalHours={setGoalHours} studyCatId={studyCatId} setStudyCatId={setStudyCatId} categories={categories} setShowSettings={setShowSettings} setShowGoogleCal={setShowGoogleCal} setShowDriveSync={setShowDriveSync}/>}
       {showMonthly     && <MonthlyTaskModal    tasks={monthlyTasks} onSave={t=>{setMonthlyTasks(t);setShowMonthly(false);}} onClose={()=>setShowMonthly(false)} theme={T}/>}
       {showGoogleCal   && <GoogleCalendarModal onImport={evts=>setCalendarEvents(p=>[...p,...evts])} onClose={()=>setShowGoogleCal(false)} theme={T}/>}
+      {showDriveSync   && <GoogleDriveSync
+        appData={{categories,selectedCat,studyCatId,weeklyTemplates,weeklyTasks,customTasks,longTermTasks,logs,diaries,goalHours,weekHistory,exportedAt:new Date().toISOString()}}
+        onRestore={p=>{
+          if(p.categories)setCategories(p.categories);
+          if(p.selectedCat)setSelectedCat(p.selectedCat);
+          if(p.studyCatId)setStudyCatId(p.studyCatId);
+          if(p.weeklyTemplates)setWeeklyTemplates(p.weeklyTemplates);
+          if(p.weeklyTasks)setWeeklyTasks(p.weeklyTasks);
+          if(p.customTasks)setCustomTasks(p.customTasks);
+          if(p.longTermTasks)setLongTermTasks(p.longTermTasks);
+          if(p.logs)setLogs(p.logs);
+          if(p.diaries)setDiaries(p.diaries);
+          if(p.goalHours)setGoalHours(p.goalHours);
+          if(p.weekHistory)setWeekHistory(p.weekHistory);
+        }}
+        onClose={()=>setShowDriveSync(false)}
+        theme={T}
+      />}
       {diaryModal      && <DiaryScreen T={T} S={S} diaryModal={diaryModal} diaries={diaries} saveDiary={saveDiary} setDiaryModal={setDiaryModal}/>}
       {showWeekHistory && <WeekHistoryModal    history={weekHistory} onClose={()=>setShowWeekHistory(false)} theme={T}/>}
       {showLongTerm    && <LongTermModal       tasks={longTermTasks} onSave={setLongTermTasks} onClose={()=>setShowLongTerm(false)} theme={T}/>}
