@@ -34,30 +34,42 @@ const downloadFile = async (token, fileId) => {
   return res.json();
 };
 
-// ファイルを作成 or 更新
+// ファイルを作成 or 更新（iOS対応: multipartを使わずシンプルな方法で）
 const uploadFile = async (token, fileId, data) => {
-  const blob    = new Blob([JSON.stringify(data)], { type: "application/json" });
-  const url     = fileId
-    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`
-    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+  const body = JSON.stringify(data);
 
   if(fileId) {
-    // 更新
-    const res = await fetch(url, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: blob,
-    });
+    // 既存ファイル更新
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body,
+      }
+    );
     return res.json();
   } else {
-    // 新規作成
-    const meta = JSON.stringify({ name: FILE_NAME, parents: ["appDataFolder"] });
-    const form = new FormData();
-    form.append("metadata", new Blob([meta], { type: "application/json" }));
-    form.append("file", blob);
+    // 新規: まずメタデータでファイル作成
+    const metaRes = await fetch(
+      "https://www.googleapis.com/drive/v3/files",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: FILE_NAME, parents: ["appDataFolder"], mimeType: "application/json" }),
+      }
+    );
+    const metaData = await metaRes.json();
+    if(!metaData.id) throw new Error("ファイル作成失敗: " + JSON.stringify(metaData));
+
+    // 次にコンテンツをアップロード
     const res = await fetch(
-      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-      { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
+      `https://www.googleapis.com/upload/drive/v3/files/${metaData.id}?uploadType=media`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body,
+      }
     );
     return res.json();
   }
