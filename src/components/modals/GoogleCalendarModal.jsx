@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { BASE_FONT, DAYS_LABEL, pad, LS } from "../../constants";
+import { loadGoogleScript } from "../../utils/googleAuth";
 
 const CLIENT_ID  = "931629794947-m5gea5ci9u3oe9a2smqaqcsfot0qgo7e.apps.googleusercontent.com";
 const SCOPE      = "https://www.googleapis.com/auth/calendar.readonly";
@@ -60,27 +61,20 @@ export default function GoogleCalendarModal({ onImport, onClose, theme }) {
   const tokenRef = useRef(null);
 
   useEffect(() => {
-    const loadGIS = () => {
-      if(!window.google?.accounts?.oauth2) return;
-      tokenRef.current = window.google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPE,
-        callback: async (resp) => {
-          if(resp.error) { setError("認証エラー: " + resp.error); setStatus("idle"); return; }
-          LS.set(TOKEN_KEY,  resp.access_token);
-          LS.set(EXPIRY_KEY, Date.now() + 3500 * 1000);
-          await fetchEvents(resp.access_token);
-        },
-      });
-    };
-    if(window.google?.accounts?.oauth2) { loadGIS(); }
-    else {
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.onload = loadGIS;
-      s.onerror = () => setError("Google APIの読み込みに失敗しました");
-      document.body.appendChild(s);
-    }
+    loadGoogleScript()
+      .then(() => {
+        tokenRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPE,
+          callback: async (resp) => {
+            if(resp.error) { setError("認証エラー: " + resp.error); setStatus("idle"); return; }
+            LS.set(TOKEN_KEY,  resp.access_token);
+            LS.set(EXPIRY_KEY, Date.now() + 3500 * 1000);
+            await fetchEvents(resp.access_token);
+          },
+        });
+      })
+      .catch((e) => setError(e.message));
   }, []);
 
   const signIn = () => {
