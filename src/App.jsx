@@ -21,13 +21,13 @@ import WeeklyTemplateManager from "./components/modals/WeeklyTemplateManager";
 import MoveTaskPopup         from "./components/modals/MoveTaskPopup";
 import MonthlyTaskModal      from "./components/modals/MonthlyTaskModal";
 import GoogleCalendarModal   from "./components/modals/GoogleCalendarModal";
-import GoogleDriveSync       from "./components/modals/GoogleDriveSync";
+import GoogleDriveSync, { autoBackupToDrive } from "./components/modals/GoogleDriveSync";
 import { DIARY_COLORS }      from "./components/modals/DiaryModal";
 import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.10.2";
+export const APP_VERSION = "v2.10.3";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -672,6 +672,20 @@ export default function App() {
   },[calendarEvents]);
   useEffect(()=>LS.set("tf_studyCatId",   studyCatId),   [studyCatId]);
   useEffect(()=>LS.set("tf_weekHistory",  weekHistory),  [weekHistory]);
+
+  // ─── Googleドライブ自動バックアップ ─────────────────────────────────────
+  // 日記保存・タスク完了・タイマー記録の変更を検知し、数秒後に1回だけDriveへ保存（デバウンス）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoBackupToDrive({
+        categories, selectedCat, studyCatId,
+        weeklyTemplates, weeklyTasks, customTasks,
+        longTermTasks, logs, diaries,
+        goalHours, weekHistory,
+      });
+    }, 4000); // 4秒間操作がなければ保存
+    return () => clearTimeout(timer);
+  }, [diaries, weeklyTasks, customTasks, logs, longTermTasks]);
   useEffect(()=>{ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); },[]);
 
   const handleStop = () => { timerStop(log=>setLogs(p=>[log,...p])); };
