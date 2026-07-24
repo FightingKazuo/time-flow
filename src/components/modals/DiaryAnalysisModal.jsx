@@ -174,7 +174,7 @@ ${diaryText}
         {status === "loading" && (
           <div style={{textAlign:"center",padding:"32px 0",color:sub}}>
             <div style={{fontSize:32,marginBottom:12,animation:"spin 1s linear infinite",display:"inline-block"}}>⏳</div>
-            <div style={{fontSize:BASE_FONT-1,fontWeight:700}}>Claudeが分析中...</div>
+            <div style={{fontSize:BASE_FONT-1,fontWeight:700}}>AIが分析中...</div>
             <div style={{fontSize:11,color:muted,marginTop:4}}>日記{entries.length}件を読んでいます</div>
             <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
           </div>
