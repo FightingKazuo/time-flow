@@ -28,7 +28,7 @@ export default function DiaryListModal({ diaries, onOpen, onClose, theme }) {
         </div>
 
         <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:4,scrollbarWidth:"none"}}>
-          <button onClick={()=>setFilter("all")} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter==="all"?accent:border}`,background:filter==="all"?`rgba(79,142,247,0.12)`:"transparent",color:filter==="all"?accent:sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700}}>すべて</button>
+          <button onClick={()=>setFilter("all")} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter==="all"?accent:border}`,background:filter==="all"?`rgba(79,142,247,0.12)`:"transparent",color:filter==="all"?accent:sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700,whiteSpace:"nowrap"}}>すべて</button>
           {DIARY_COLORS.filter(c=>c.id!=="none").map(c=>(
             <button key={c.id} onClick={()=>setFilter(c.id)} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter===c.id?c.color:border}`,background:filter===c.id?`${c.color}22`:"transparent",color:filter===c.id?c.color:sub,cursor:"pointer",fontSize:BASE_FONT-3,fontWeight:700,whiteSpace:"nowrap"}}>{c.label}</button>
           ))}
