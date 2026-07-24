@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { BASE_FONT, LS } from "../../constants";
+import { loadGoogleScript } from "../../utils/googleAuth";
 
 const CLIENT_ID   = "931629794947-m5gea5ci9u3oe9a2smqaqcsfot0qgo7e.apps.googleusercontent.com";
 const SCOPE       = "https://www.googleapis.com/auth/drive.appdata";
@@ -8,7 +9,7 @@ const EXPIRY_KEY  = "tf_drive_expiry";
 const FILE_NAME   = "timeflow-data.json";
 
 // アクセストークン取得
-const getToken = () => {
+export const getDriveToken = () => {
   const token  = LS.get(TOKEN_KEY, null);
   const expiry = LS.get(EXPIRY_KEY, 0);
   if(token && Date.now() < expiry) return token;
@@ -16,7 +17,7 @@ const getToken = () => {
 };
 
 // Drive appdata内のファイルを検索
-const findFile = async (token) => {
+export const findFile = async (token) => {
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id,name,modifiedTime)`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -35,7 +36,7 @@ const downloadFile = async (token, fileId) => {
 };
 
 // ファイルを作成 or 更新（iOS対応: multipartを使わずシンプルな方法で）
-const uploadFile = async (token, fileId, data) => {
+export const uploadFile = async (token, fileId, data) => {
   const body = JSON.stringify(data);
 
   if(fileId) {
@@ -90,38 +91,32 @@ export default function GoogleDriveSync({ appData, onRestore, onClose, theme }) 
   const [driveFile, setDriveFile] = useState(null);   // {id, modifiedTime}
   const tokenRef = useRef(null);
 
-  const isAuthed = !!getToken();
+  const isAuthed = !!getDriveToken();
 
   useEffect(() => {
     if(isAuthed) checkDriveFile();
   }, []);
 
   useEffect(() => {
-    const load = () => {
-      if(!window.google?.accounts?.oauth2) return;
-      tokenRef.current = window.google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPE,
-        callback: async (resp) => {
-          if(resp.error) { setMsg({ok:false, text:"認証エラー: "+resp.error}); setStatus("idle"); return; }
-          LS.set(TOKEN_KEY,  resp.access_token);
-          LS.set(EXPIRY_KEY, Date.now() + 3500 * 1000);
-          setStatus("authed");
-          await checkDriveFile();
-        },
-      });
-    };
-    if(window.google?.accounts?.oauth2) { load(); }
-    else {
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.onload = load;
-      document.body.appendChild(s);
-    }
+    loadGoogleScript()
+      .then(() => {
+        tokenRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPE,
+          callback: async (resp) => {
+            if(resp.error) { setMsg({ok:false, text:"認証エラー: "+resp.error}); setStatus("idle"); return; }
+            LS.set(TOKEN_KEY,  resp.access_token);
+            LS.set(EXPIRY_KEY, Date.now() + 3500 * 1000);
+            setStatus("authed");
+            await checkDriveFile();
+          },
+        });
+      })
+      .catch((e) => setMsg({ok:false, text:e.message}));
   }, []);
 
   const checkDriveFile = async () => {
-    const token = getToken();
+    const token = getDriveToken();
     if(!token) return;
     try {
       const file = await findFile(token);
@@ -148,7 +143,7 @@ export default function GoogleDriveSync({ appData, onRestore, onClose, theme }) 
 
   // アップロード（保存）
   const handleUpload = async () => {
-    const token = getToken();
+    const token = getDriveToken();
     if(!token) { signIn(); return; }
     setStatus("loading");
     setMsg(null);
@@ -166,7 +161,7 @@ export default function GoogleDriveSync({ appData, onRestore, onClose, theme }) 
 
   // ダウンロード（読み込み）
   const handleDownload = async () => {
-    const token = getToken();
+    const token = getDriveToken();
     if(!token) { signIn(); return; }
     if(!driveFile) { setMsg({ok:false, text:"Driveにデータがありません"}); return; }
     setStatus("loading");
@@ -259,13 +254,33 @@ export default function GoogleDriveSync({ appData, onRestore, onClose, theme }) 
               ⬇️ Driveからデータを読み込む
             </button>
 
+            {/* 自動同期案内 */}
+            <div style={{background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.25)",borderRadius:8,padding:"10px 12px",marginBottom:10,fontSize:BASE_FONT-3,color:"#34d399",lineHeight:1.6}}>
+              ✓ サインイン後は、日記・タスクの変更が数秒後に自動でDriveへ保存されます。
+            </div>
+
             {/* 注意書き */}
             <div style={{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:8,padding:"10px 12px",fontSize:BASE_FONT-3,color:"#fbbf24",lineHeight:1.6}}>
-              ⚠️ 読み込むと現在のデータが上書きされます。<br/>PC・iPhone両方で使う場合は、編集後に必ず「保存」してください。
+              ⚠️ 読み込むと現在のデータが上書きされます。<br/>別の端末で編集した後は、少し待ってから読み込んでください（自動保存が完了するまで数秒かかります）。
             </div>
           </>
         )}
       </div>
     </div>
   );
+}
+
+
+// ─── 自動バックアップ（App.jsxから呼び出す） ────────────────────────────────
+// トークンが有効な場合のみサイレントにDriveへ保存。失敗しても何もしない。
+export async function autoBackupToDrive(appData) {
+  const token = getDriveToken();
+  if(!token) return; // 未ログインなら何もしない
+  try {
+    const file = await findFile(token);
+    const data = { ...appData, syncedAt: new Date().toISOString() };
+    await uploadFile(token, file?.id || null, data);
+  } catch(e) {
+    // サイレント失敗（通知しない）
+  }
 }
