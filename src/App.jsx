@@ -27,12 +27,15 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.10.6";
+export const APP_VERSION = "v2.10.7";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
 document.body.style.background = T.bg;
 document.body.style.color      = T.text;
+
+// ─── PC幅判定（900px以上をPCとみなす） ───────────────────────────────────────
+export const isPC = typeof window !== "undefined" && window.innerWidth >= 900;
 
 // ─── Offline Banner ───────────────────────────────────────────────────────────
 function OfflineBanner() {
@@ -72,7 +75,6 @@ function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents
   setShowMonthly, setShowLongTerm, toggleTask, setCustomTasks, setLongTermTasks }) {
 
   const mobile      = window.innerWidth < 640;
-  const isPC         = typeof window !== "undefined" && window.innerWidth >= 900;
   const todayTotal  = logs.filter(l => l.date === todayStr()).reduce((s, l) => s + l.duration, 0);
 
   return (
