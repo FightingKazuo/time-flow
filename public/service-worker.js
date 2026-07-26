@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timeflow-v2.10.3';
+const CACHE_NAME = 'timeflow-v2.10.5';
 
 // インストール：最小限だけキャッシュ（ビルドファイル名は動的なので無理に指定しない）
 self.addEventListener('install', e => {
