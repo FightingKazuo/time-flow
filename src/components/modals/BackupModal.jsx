@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { BASE_FONT, fmtHM } from "../../constants";
+import { BASE_FONT, fmtHM, getDiaryText } from "../../constants";
 
 export default function BackupModal({ data, onRestore, onClose, theme }) {
   const t      = theme || {};
@@ -53,7 +53,7 @@ export default function BackupModal({ data, onRestore, onClose, theme }) {
         <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
           {[
             {label:"記録",       val:data.logs?.length||0,        color:accent},
-            {label:"日記",       val:Object.keys(data.diaries||{}).filter(k=>data.diaries[k]?.trim()).length, color:"#fbbf24"},
+            {label:"日記",       val:Object.keys(data.diaries||{}).filter(k=>getDiaryText(data.diaries[k])?.trim()).length, color:"#fbbf24"},
             {label:"カテゴリー", val:data.categories?.length||0,  color:"#34d399"},
             {label:"長期タスク", val:data.longTermTasks?.length||0,color:"#fb923c"},
             {label:"週間履歴",   val:data.weekHistory?.length||0,  color:"#a78bfa"},
