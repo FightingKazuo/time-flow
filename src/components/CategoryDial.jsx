@@ -1,12 +1,14 @@
 import { useRef, useEffect } from "react";
 import { hexRgb } from "../constants";
 
+// PC幅判定: windowが使えない環境でも安全なフォールバック
+const isPC = typeof window !== "undefined" && window.innerWidth >= 900;
+
 export default function CategoryDial({ categories, selected, onSelect, disabled, theme }) {
   const t      = theme || {};
   const card2  = t.card2  || "#161920";
   const border = t.border || "#2a2f3d";
   const sub    = t.sub    || "#6b7a99";
-  const isPC   = typeof window !== "undefined" && window.innerWidth >= 900;
 
   const ref = useRef(null);
   useEffect(()=>{
