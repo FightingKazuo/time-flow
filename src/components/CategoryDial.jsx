@@ -6,6 +6,7 @@ export default function CategoryDial({ categories, selected, onSelect, disabled,
   const card2  = t.card2  || "#161920";
   const border = t.border || "#2a2f3d";
   const sub    = t.sub    || "#6b7a99";
+  const isPC   = typeof window !== "undefined" && window.innerWidth >= 900;
 
   const ref = useRef(null);
   useEffect(()=>{
@@ -17,7 +18,7 @@ export default function CategoryDial({ categories, selected, onSelect, disabled,
   return (
     <div style={{marginBottom:14}}>
       <div style={{fontSize:11,color:sub,fontWeight:700,marginBottom:6,textAlign:"center"}}>カテゴリー</div>
-      <div ref={ref} style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 12px 6px",scrollSnapType:"x mandatory",scrollbarWidth:"none"}}>
+      <div ref={ref} style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 12px 6px",scrollSnapType:"x mandatory",scrollbarWidth:"none",justifyContent:isPC?"center":"flex-start"}}>
         {categories.map(c=>{
           const a=selected===c.id;
           return (
