@@ -27,7 +27,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.10.5";
+export const APP_VERSION = "v2.10.6";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
