@@ -27,7 +27,7 @@ import DiaryAnalysisModal    from "./components/modals/DiaryAnalysisModal";
 import { useTimer }          from "./hooks/useTimer";
 import { useWeekReset }      from "./hooks/useWeekReset";
 
-export const APP_VERSION = "v2.10.3";
+export const APP_VERSION = "v2.10.5";
 
 // ─── テーマを起動時に1回だけ確定 ─────────────────────────────────────────────
 const T = buildTheme();
@@ -72,6 +72,7 @@ function TaskTab({ T, S, weeklyTasks, customTasks, logs, diaries, calendarEvents
   setShowMonthly, setShowLongTerm, toggleTask, setCustomTasks, setLongTermTasks }) {
 
   const mobile      = window.innerWidth < 640;
+  const isPC         = typeof window !== "undefined" && window.innerWidth >= 900;
   const todayTotal  = logs.filter(l => l.date === todayStr()).reduce((s, l) => s + l.duration, 0);
 
   return (
@@ -728,11 +729,12 @@ export default function App() {
   };
 
   const S = {
-    app:   {minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column"},
-    header:{padding:"14px 16px 0",borderBottom:`1px solid ${T.border}`,background:T.bg},
+    app:   {minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Noto Sans JP',sans-serif",fontSize:BASE_FONT,display:"flex",flexDirection:"column",alignItems:"center"},
+    shell: {width:"100%",maxWidth:isPC?720:"none",display:"flex",flexDirection:"column",flex:1,minHeight:"100vh"},
+    header:{padding:"14px 16px 0",borderBottom:`1px solid ${T.border}`,background:T.bg,width:"100%",boxSizing:"border-box"},
     tabs:  {display:"flex",gap:2,marginTop:10},
     tab:   a=>({flex:1,padding:"10px 0",fontSize:BASE_FONT-1,fontWeight:700,border:"none",borderBottom:a?`2px solid ${T.accent}`:"2px solid transparent",background:a?T.accentBg:"transparent",color:a?T.accent:T.sub,cursor:"pointer",transition:"all 0.2s",borderRadius:"8px 8px 0 0"}),
-    body:  {flex:1,padding:"12px 12px",overflowY:"auto"},
+    body:  {flex:1,padding:"12px 16px 24px",overflowY:"auto",width:"100%",boxSizing:"border-box"},
     card:  {background:T.card,borderRadius:12,border:`1px solid ${T.border}`,padding:12,marginBottom:10,boxShadow:T.shadow},
     input: {background:T.card2,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:BASE_FONT,outline:"none",flex:1},
     btn:   (bg=T.accent)=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:BASE_FONT-1,fontWeight:700,cursor:"pointer"}),
@@ -787,6 +789,7 @@ export default function App() {
         </div>
       )}
 
+      <div style={S.shell}>
       <div style={S.header}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
@@ -813,6 +816,7 @@ export default function App() {
         {tab==="task"  && <TaskTab T={T} S={S} weeklyTasks={weeklyTasks} customTasks={customTasks} logs={logs} diaries={diaries} calendarEvents={calendarEvents} setCalendarEvents={setCalendarEvents} longTermTasks={longTermTasks} addingDay={addingDay} setAddingDay={setAddingDay} movePopup={movePopup} setMovePopup={setMovePopup} setDiaryModal={setDiaryModal} setShowDiaryList={setShowDiaryList} setShowWeekHistory={setShowWeekHistory} setShowWeeklyMgr={setShowWeeklyMgr} setShowMonthly={setShowMonthly} setShowLongTerm={setShowLongTerm} toggleTask={toggleTask} setCustomTasks={setCustomTasks} setLongTermTasks={setLongTermTasks}/>}
         {tab==="timer" && <TimerTab T={T} S={S} categories={categories} selectedCat={selectedCat} setSelectedCat={setSelectedCat} studyCatId={studyCatId} mode={mode} setMode={setMode} pomoDuration={pomoDuration} setPomoDuration={setPomoDuration} elapsed={elapsed} running={running} timerStart={timerStart} timerPause={timerPause} handleStop={handleStop} setShowCatMgr={setShowCatMgr} setTab={setTab} catColor={catColor} todayStudyTotal={todayStudyTotal} pomoDone={pomoDone}/>}
         {tab==="log"   && <LogTab T={T} S={S} logs={logs} diaries={diaries} categories={categories} studyCatId={studyCatId} weeklyTasks={weeklyTasks} customTasks={customTasks} goalHours={goalHours} logSelectedDay={logSelectedDay} setLogSelectedDay={setLogSelectedDay} setDiaryModal={setDiaryModal} setEditingLog={setEditingLog} setLogs={setLogs} setShowDiaryList={setShowDiaryList} setShowDiaryAnalysis={setShowDiaryAnalysis}/>}
+      </div>
       </div>
 
       {showSettings    && <SettingsScreen T={T} S={S} goalHours={goalHours} setGoalHours={setGoalHours} studyCatId={studyCatId} setStudyCatId={setStudyCatId} categories={categories} setShowSettings={setShowSettings} setShowGoogleCal={setShowGoogleCal} setShowDriveSync={setShowDriveSync}/>}
